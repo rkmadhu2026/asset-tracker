@@ -1,0 +1,297 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: infrastructure
+    // Document ID: INF-XXX
+    // Fields:
+    //   - id: string (required)
+    //   - name: string (required)
+    //   - vendor: string (required)
+    //   - model: string (required)
+    //   - type: string (required)
+    //   - status: string (required, enum: Active, Warning, Offline)
+    //   - site: string (required)
+    //   - rack: string (optional)
+    //   - uPosition: string (optional)
+    //   - ip: string (optional)
+    //   - mask: string (optional)
+    //   - gateway: string (optional)
+    //   - vlan: string (optional)
+    //   - serial: string (optional)
+    //   - firmware: string (optional)
+    //   - uptime: string (optional)
+    //   - cpu: string (optional)
+    //   - memory: string (optional)
+    //   - temp: string (optional)
+    //   - ports: string (optional)
+    //   - lastBackup: string (optional)
+    //   - owner: string (optional)
+    //   - criticality: string (optional, enum: Critical, High, Medium, Low)
+    //   - purchaseDate: string (optional)
+    //   - warrantyExpiry: string (optional)
+    //   - updatedAt: timestamp (optional)
+    //
+    // Collection: chats/{chatId}/messages
+    // Document ID: auto-generated
+    // Fields:
+    //   - userId: string (required, matches auth.uid)
+    //   - role: string (required, enum: user, assistant)
+    //   - content: string (required)
+    //   - type: string (optional)
+    //   - metadata: map (optional)
+    //   - timestamp: timestamp (required)
+    //
+    // Collection: audit_logs
+    // Document ID: auto-generated
+    // Fields:
+    //   - userId: string (required, matches auth.uid)
+    //   - userEmail: string (optional)
+    //   - action: string (required)
+    //   - resource: string (optional)
+    //   - details: string (optional)
+    //   - timestamp: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (
+          (request.auth.token.email == "rajkumarmadhu2024@gmail.com" && request.auth.token.email_verified == true) ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+        );
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidDevice(data) {
+      return data.id is string && data.id.size() > 0 &&
+             data.name is string && data.name.size() > 0 &&
+             data.vendor is string && data.vendor.size() > 0 &&
+             data.model is string && data.model.size() > 0 &&
+             data.type is string && data.type.size() > 0 &&
+             data.status in ['Active', 'Warning', 'Offline'] &&
+             data.site is string && data.site.size() > 0;
+    }
+
+    function isValidMessage(data) {
+      return data.userId == request.auth.uid &&
+             data.role in ['user', 'assistant'] &&
+             data.content is string && data.content.size() > 0 &&
+             data.timestamp is timestamp;
+    }
+
+    function isValidAuditLog(data) {
+      return data.userId == request.auth.uid &&
+             data.action is string && data.action.size() > 0 &&
+             data.timestamp is timestamp;
+    }
+
+    function isValidValidationHistory(data) {
+      return data.userId == request.auth.uid &&
+             data.config is string && data.config.size() > 0 &&
+             data.result is string && data.result.size() > 0 &&
+             data.timestamp is timestamp;
+    }
+
+    function isValidDrift(data) {
+      return data.deviceId is string && data.deviceId.size() > 0 &&
+             data.timestamp is timestamp;
+    }
+
+    function isValidConfigurationTask(data) {
+      return data.title is string && data.title.size() > 0 &&
+             data.priority in ['High', 'Medium', 'Low'] &&
+             data.status in ['Pending', 'Completed'] &&
+             data.timestamp is timestamp;
+    }
+
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() > 0 &&
+             data.email is string && isValidEmail(data.email) &&
+             data.role in ['admin', 'developer', 'viewer'] &&
+             data.lastLogin is string;
+    }
+
+    function isValidDeviceTemplate(data) {
+      return data.name is string && data.name.size() > 0 &&
+             data.vendor is string && data.vendor.size() > 0 &&
+             data.model is string && data.model.size() > 0 &&
+             data.type is string && data.type.size() > 0;
+    }
+
+    function isValidDocument(data) {
+      return data.id is string && data.id.size() > 0 &&
+             data.deviceId is string && data.deviceId.size() > 0 &&
+             data.name is string && data.name.size() > 0 &&
+             data.url is string && data.url.size() > 0 &&
+             data.type is string && data.type.size() > 0 &&
+             isValidDateString(data.uploadedAt);
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string &&
+        dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    function isValidDeviceConfig(data) {
+      return data.name is string && data.name.size() > 0 &&
+             data.ip is string && data.ip.size() > 0 &&
+             data.os is string && data.os.size() > 0;
+    }
+
+    // ===============================================================
+    // Match Rules
+    // ===============================================================
+
+    // Devices collection
+    match /devices/{deviceId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidDeviceConfig(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Infrastructure collection
+    match /infrastructure/{deviceId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidDevice(request.resource.data);
+      allow delete: if isAdmin();
+      
+      match /documents/{documentId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && isValidDocument(request.resource.data);
+        allow update, delete: if false; // Documents are immutable
+      }
+    }
+
+    // Chat history
+    match /chats/{chatId}/messages/{messageId} {
+      allow read: if isAuthenticated() && chatId == request.auth.uid;
+      allow create: if isAuthenticated() && chatId == request.auth.uid && isValidMessage(request.resource.data);
+      allow update, delete: if false; // Messages are immutable
+    }
+
+    // Audit logs
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && isValidAuditLog(request.resource.data);
+      allow update, delete: if false; // Logs are immutable
+    }
+
+    // Validation history
+    match /validation_history/{historyId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidValidationHistory(request.resource.data);
+      allow update, delete: if false; // History is immutable
+    }
+
+    // Drifts
+    match /drifts/{driftId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidDrift(request.resource.data);
+      allow update, delete: if false; // Drifts are immutable
+    }
+
+    // Configuration Tasks
+    match /configuration_tasks/{taskId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidConfigurationTask(request.resource.data);
+      allow update: if isAuthenticated() && isValidConfigurationTask(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Device Templates
+    match /device_templates/{templateId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidDeviceTemplate(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Tenants (legacy — being phased out in favor of clients + sites)
+    match /tenants/{tenantId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Clients (companies; ISV brands roll up to a parent via parentClientId)
+    match /clients/{clientId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Sites (physical/logical instances; many-to-many to clients via clientIds[])
+    match /sites/{siteId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Racks (scoped to a site via siteId)
+    match /racks/{rackId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Asset Types
+    match /asset_types/{typeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.name is string && request.resource.data.name.size() > 0;
+      allow update, delete: if isAdmin();
+    }
+
+    // Assets
+    match /assets/{assetId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Asset Documents
+    match /asset_documents/{documentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+        request.resource.data.assetId is string && 
+        request.resource.data.name is string && 
+        request.resource.data.url is string;
+      allow update, delete: if isAdmin();
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'viewer' || isAdmin());
+      allow update: if isAuthenticated() && (
+        (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role) || 
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+  }
+}

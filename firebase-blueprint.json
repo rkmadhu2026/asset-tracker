@@ -1,0 +1,267 @@
+{
+  "entities": {
+    "Device": {
+      "title": "Infrastructure Device",
+      "description": "A network device in the infrastructure inventory.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "vendor": { "type": "string" },
+        "model": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Warning", "Offline"] },
+        "site": { "type": "string" },
+        "rack": { "type": "string" },
+        "uPosition": { "type": "string" },
+        "ip": { "type": "string" },
+        "mask": { "type": "string" },
+        "gateway": { "type": "string" },
+        "vlan": { "type": "string" },
+        "serial": { "type": "string" },
+        "firmware": { "type": "string" },
+        "uptime": { "type": "string" },
+        "cpu": { "type": "string" },
+        "memory": { "type": "string" },
+        "temp": { "type": "string" },
+        "ports": { "type": "string" },
+        "lastBackup": { "type": "string" },
+        "owner": { "type": "string" },
+        "criticality": { "type": "string", "enum": ["Critical", "High", "Medium", "Low"] },
+        "purchaseDate": { "type": "string" },
+        "warrantyExpiry": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "vendor", "model", "type", "status", "site"]
+    },
+    "ChatMessage": {
+      "title": "AI Chat Message",
+      "description": "A message in the AI assistant conversation.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string" },
+        "type": { "type": "string" },
+        "metadata": { "type": "object" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "role", "content", "timestamp"]
+    },
+    "AuditLog": {
+      "title": "Audit Log Entry",
+      "description": "A log of actions performed in the system.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "action": { "type": "string" },
+        "resource": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "action", "timestamp"]
+    },
+    "Document": {
+      "title": "Device Document",
+      "description": "A document (invoice, manual, etc.) associated with a device.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "deviceId": { "type": "string" },
+        "name": { "type": "string" },
+        "url": { "type": "string" },
+        "type": { "type": "string" },
+        "uploadedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "deviceId", "name", "url", "uploadedAt"]
+    },
+    "ValidationHistory": {
+      "title": "Gemini Validation History",
+      "description": "History of Gemini AI validation results.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "config": { "type": "string" },
+        "result": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "config", "result", "timestamp"]
+    },
+    "Drift": {
+      "title": "Configuration Drift",
+      "description": "A detected configuration drift.",
+      "type": "object",
+      "properties": {
+        "deviceId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["deviceId", "timestamp"]
+    },
+    "ConfigurationTask": {
+      "title": "Configuration Task",
+      "description": "A configuration task with priority.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "priority": { "type": "string", "enum": ["High", "Medium", "Low"] },
+        "status": { "type": "string", "enum": ["Pending", "Completed"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "priority", "status", "timestamp"]
+    },
+    "DeviceTemplate": {
+      "title": "Device Template",
+      "description": "A template for pre-populating device fields.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "vendor": { "type": "string" },
+        "model": { "type": "string" },
+        "type": { "type": "string" },
+        "criticality": { "type": "string" },
+        "owner": { "type": "string" }
+      },
+      "required": ["name", "vendor", "model", "type"]
+    },
+    "User": {
+      "title": "User Profile",
+      "description": "A user profile with role-based access control.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "developer", "viewer"] },
+        "lastLogin": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "lastLogin"]
+    },
+    "AssetType": {
+      "title": "Asset Type",
+      "description": "A custom asset type.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "createdAt"]
+    },
+    "Client": {
+      "title": "Client",
+      "description": "A company that owns one or more sites. Sub-clients (e.g. ISV brands, product divisions) reference a parent via parentClientId. Hierarchy can nest (e.g. FinSpot → FinSpot ISV → VACHANA).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Inactive", "Suspended"] },
+        "parentClientId": { "type": "string" },
+        "legalName": { "type": "string" },
+        "address": { "type": "string" },
+        "website": { "type": "string" },
+        "primaryContactEmail": { "type": "string", "format": "email" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "slug", "status"]
+    },
+    "Site": {
+      "title": "Site",
+      "description": "A physical or logical infrastructure instance. clientIds[] is many-to-many to clients (shared infra patterns like ISV).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "clientIds": { "type": "array", "items": { "type": "string" } },
+        "env": { "type": "string", "enum": ["PROD", "DR", "UAT", "DEV", "ISV"] },
+        "region": { "type": "string" },
+        "ip": { "type": "string" },
+        "url": { "type": "string" },
+        "domain": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "clientIds", "env"]
+    },
+    "Rack": {
+      "title": "Rack",
+      "description": "A rack within a site, scoped via siteId.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "siteId": { "type": "string" },
+        "name": { "type": "string" },
+        "position": { "type": "string" },
+        "totalU": { "type": "integer" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "siteId", "name"]
+    }
+  },
+  "firestore": {
+    "/infrastructure": {
+      "schema": "Device",
+      "description": "Global infrastructure inventory."
+    },
+    "/infrastructure/{deviceId}/documents": {
+      "schema": "Document",
+      "description": "Documents associated with a device."
+    },
+    "/chats/{chatId}/messages": {
+      "schema": "ChatMessage",
+      "description": "User-specific AI chat history."
+    },
+    "/audit_logs": {
+      "schema": "AuditLog",
+      "description": "System-wide audit logs."
+    },
+    "/validation_history": {
+      "schema": "ValidationHistory",
+      "description": "Gemini AI validation history."
+    },
+    "/drifts": {
+      "schema": "Drift",
+      "description": "Detected configuration drifts."
+    },
+    "/configuration_tasks": {
+      "schema": "ConfigurationTask",
+      "description": "Configuration tasks with priority."
+    },
+    "/device_templates": {
+      "schema": "DeviceTemplate",
+      "description": "Device templates for pre-populating fields."
+    },
+    "/users": {
+      "schema": "User",
+      "description": "User profiles and roles."
+    },
+    "/asset_types": {
+      "schema": "AssetType",
+      "description": "Custom asset types."
+    },
+    "/asset_documents": {
+      "schema": "Document",
+      "description": "Documents associated with an asset."
+    },
+    "/clients": {
+      "schema": "Client",
+      "description": "Companies/clients. Sub-clients link to a parent via parentClientId."
+    },
+    "/sites": {
+      "schema": "Site",
+      "description": "Sites/instances. Many-to-many to clients via clientIds[]."
+    },
+    "/racks": {
+      "schema": "Rack",
+      "description": "Racks scoped to a site via siteId."
+    }
+  }
+}
