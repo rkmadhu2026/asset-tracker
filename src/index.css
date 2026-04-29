@@ -27,6 +27,9 @@
 }
 
 @layer base {
+  html {
+    color-scheme: light;
+  }
   * {
     border-color: var(--color-border);
   }

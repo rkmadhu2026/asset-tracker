@@ -1775,7 +1775,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                     const asset = assetsData.find(a => a.id === id);
                     const allValues = selectedAssetIds.map(i => assetsData.find(a => a.id === i)?.manufacturer);
                     const isDifferent = new Set(allValues).size > 1;
-                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50 dark:bg-yellow-900/20' : ''}>{asset?.manufacturer || 'N/A'}</TableCell>;
+                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50' : ''}>{asset?.manufacturer || 'N/A'}</TableCell>;
                   })}
                 </TableRow>
                 <TableRow>
@@ -1784,7 +1784,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                     const asset = assetsData.find(a => a.id === id);
                     const allValues = selectedAssetIds.map(i => assetsData.find(a => a.id === i)?.model);
                     const isDifferent = new Set(allValues).size > 1;
-                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50 dark:bg-yellow-900/20' : ''}>{asset?.model || 'N/A'}</TableCell>;
+                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50' : ''}>{asset?.model || 'N/A'}</TableCell>;
                   })}
                 </TableRow>
                 <TableRow>
@@ -1793,7 +1793,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                     const asset = assetsData.find(a => a.id === id);
                     const allValues = selectedAssetIds.map(i => assetsData.find(a => a.id === i)?.type);
                     const isDifferent = new Set(allValues).size > 1;
-                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50 dark:bg-yellow-900/20' : ''}>{asset?.type || 'N/A'}</TableCell>;
+                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50' : ''}>{asset?.type || 'N/A'}</TableCell>;
                   })}
                 </TableRow>
 
@@ -1805,7 +1805,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                     const asset = assetsData.find(a => a.id === id);
                     const allValues = selectedAssetIds.map(i => assetsData.find(a => a.id === i)?.os);
                     const isDifferent = new Set(allValues).size > 1;
-                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50 dark:bg-yellow-900/20' : ''}>{asset?.os || 'N/A'}</TableCell>;
+                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50' : ''}>{asset?.os || 'N/A'}</TableCell>;
                   })}
                 </TableRow>
                 <TableRow>
@@ -1814,7 +1814,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                     const asset = assetsData.find(a => a.id === id);
                     const allValues = selectedAssetIds.map(i => assetsData.find(a => a.id === i)?.firmware);
                     const isDifferent = new Set(allValues).size > 1;
-                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50 dark:bg-yellow-900/20' : ''}>{asset?.firmware || 'N/A'}</TableCell>;
+                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50' : ''}>{asset?.firmware || 'N/A'}</TableCell>;
                   })}
                 </TableRow>
 
@@ -1826,7 +1826,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                     const asset = assetsData.find(a => a.id === id);
                     const allValues = selectedAssetIds.map(i => assetsData.find(a => a.id === i)?.ip);
                     const isDifferent = new Set(allValues).size > 1;
-                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50 dark:bg-yellow-900/20 font-mono text-xs' : 'font-mono text-xs'}>{asset?.ip || 'N/A'}</TableCell>;
+                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50 font-mono text-xs' : 'font-mono text-xs'}>{asset?.ip || 'N/A'}</TableCell>;
                   })}
                 </TableRow>
                 <TableRow>
@@ -1835,7 +1835,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                     const asset = assetsData.find(a => a.id === id);
                     const allValues = selectedAssetIds.map(i => assetsData.find(a => a.id === i)?.location);
                     const isDifferent = new Set(allValues).size > 1;
-                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50 dark:bg-yellow-900/20' : ''}>{asset?.location || 'N/A'}</TableCell>;
+                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50' : ''}>{asset?.location || 'N/A'}</TableCell>;
                   })}
                 </TableRow>
 
@@ -1847,7 +1847,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                     const asset = assetsData.find(a => a.id === id);
                     const allValues = selectedAssetIds.map(i => assetsData.find(a => a.id === i)?.status);
                     const isDifferent = new Set(allValues).size > 1;
-                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50 dark:bg-yellow-900/20' : ''}>{getStatusBadge(asset?.status || 'Unknown')}</TableCell>;
+                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50' : ''}>{getStatusBadge(asset?.status || 'Unknown')}</TableCell>;
                   })}
                 </TableRow>
                 <TableRow>
@@ -1856,7 +1856,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                     const asset = assetsData.find(a => a.id === id);
                     const allValues = selectedAssetIds.map(i => assetsData.find(a => a.id === i)?.risk);
                     const isDifferent = new Set(allValues).size > 1;
-                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50 dark:bg-yellow-900/20' : ''}>{getRiskBadge(asset?.risk || 0)}</TableCell>;
+                    return <TableCell key={id} className={isDifferent ? 'bg-yellow-50/50' : ''}>{getRiskBadge(asset?.risk || 0)}</TableCell>;
                   })}
                 </TableRow>
               </TableBody>

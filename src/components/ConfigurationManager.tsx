@@ -132,7 +132,7 @@ export function ConfigurationManager() {
                     <Sparkles className="w-4 h-4 mr-2" />
                     Gemini Analysis
                   </h4>
-                  <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                  <div className="prose prose-sm max-w-none whitespace-pre-wrap">
                     {validationResult}
                   </div>
                 </div>
