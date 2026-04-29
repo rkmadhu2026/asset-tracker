@@ -35,10 +35,10 @@ export function Layout() {
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-muted/30 text-foreground">
+      <div className="flex h-screen w-full overflow-hidden bg-[#f7f5f0] text-foreground">
       {/* Sidebar — Desktop */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-border/80 bg-gradient-to-b from-card via-card to-muted/30 shadow-[inset_-1px_0_0_rgba(0,0,0,0.03)] lg:flex">
-        <div className="flex h-16 shrink-0 items-center border-b border-border/70 px-6">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-[#e8e4dc] bg-gradient-to-b from-[#fdfcfa] via-[#faf8f5] to-[#f3f0ea] shadow-[inset_-1px_0_0_rgba(41,37,36,0.04)] lg:flex">
+        <div className="flex h-16 shrink-0 items-center border-b border-[#ebe7df] px-6">
           <Server className="mr-2 h-6 w-6 shrink-0 text-primary" strokeWidth={2} />
           <div className="min-w-0">
             <span className="font-[family-name:var(--font-display)] text-lg font-semibold leading-none tracking-tight text-foreground">
@@ -98,10 +98,10 @@ export function Layout() {
           onClick={toggleMobileMenu}
         >
           <aside
-            className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-border/80 bg-gradient-to-b from-card via-card to-muted/30 shadow-xl"
+            className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-[#e8e4dc] bg-gradient-to-b from-[#fdfcfa] via-[#faf8f5] to-[#f3f0ea] shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex h-16 shrink-0 items-center justify-between border-b border-border/70 px-6">
+            <div className="flex h-16 shrink-0 items-center justify-between border-b border-[#ebe7df] px-6">
               <div className="flex min-w-0 items-center">
                 <Server className="mr-2 h-6 w-6 shrink-0 text-primary" strokeWidth={2} />
                 <div className="min-w-0">
@@ -160,7 +160,7 @@ export function Layout() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border/80 bg-card/95 px-4 backdrop-blur-sm sm:px-6">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#ebe7df] bg-[#fdfcfa]/95 px-4 backdrop-blur-sm sm:px-6">
           <div className="flex items-center">
             <Button 
               variant="ghost" 
@@ -225,8 +225,8 @@ export function Layout() {
         </header>
 
         {apiSyncFailed && (
-          <div className="flex shrink-0 items-start gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-950 sm:items-center sm:text-sm">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 sm:mt-0" aria-hidden />
+          <div className="flex shrink-0 items-start gap-2 border-b border-amber-200/90 bg-amber-50/95 px-4 py-2.5 text-xs text-amber-950 sm:items-center sm:text-sm">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 sm:mt-0" aria-hidden />
             <span>
               Backend unreachable — signed in with Firebase only. Run{' '}
               <code className="rounded bg-amber-500/20 px-1 py-0.5 font-mono text-[11px]">npm run server</code>{' '}
@@ -236,7 +236,7 @@ export function Layout() {
         )}
 
         {/* Page Content */}
-        <div className="flex-1 overflow-auto bg-gradient-to-b from-muted/20 to-background p-4 sm:p-6">
+        <div className="flex-1 overflow-auto bg-gradient-to-b from-[#faf9f5]/90 to-[#f7f5f0] p-4 sm:p-6">
           <div className="max-w-7xl mx-auto">
             <Outlet />
           </div>

@@ -29,14 +29,14 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-gradient-to-br from-background via-muted/40 to-background">
-        <div className="flex flex-col items-center gap-5 rounded-2xl border border-border/80 bg-card/90 px-10 py-12 shadow-lg shadow-black/[0.04] backdrop-blur-sm">
-          <div className="h-11 w-11 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+      <div className="flex h-screen w-screen items-center justify-center bg-gradient-to-br from-[#faf9f5] via-[#f7f4ee] to-[#efeae3]">
+        <div className="flex flex-col items-center gap-5 rounded-2xl border border-stone-200/90 bg-white/85 px-10 py-12 shadow-[0_24px_64px_-32px_rgba(41,37,36,0.14)] backdrop-blur-sm">
+          <div className="h-11 w-11 animate-spin rounded-full border-[3px] border-[#c97562] border-t-transparent" />
           <div className="text-center">
-            <p className="font-[family-name:var(--font-display)] text-lg font-semibold tracking-tight text-foreground">
+            <p className="font-[family-name:var(--font-display)] text-lg font-semibold tracking-tight text-stone-900">
               Argus
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">Loading workspace…</p>
+            <p className="mt-1 text-sm text-stone-500">Loading workspace…</p>
           </div>
         </div>
       </div>

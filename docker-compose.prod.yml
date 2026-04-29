@@ -1,0 +1,60 @@
+# Production-style stack for VPS: nginx (UI + /api proxy), Express API, Postgres.
+# Build/run:
+#   export GEMINI_API_KEY="your-key"   # optional; baked into client bundle
+#   export CORS_ORIGIN="http://YOUR_SERVER:8080"   # must match browser origin
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# First-time DB: after Postgres is healthy,
+#   docker compose -f docker-compose.prod.yml exec -T postgres psql -U argus -d argus -v ON_ERROR_STOP=1 < server/migrations/001_initial.sql
+#   docker compose -f docker-compose.prod.yml exec -T postgres psql -U argus -d argus -v ON_ERROR_STOP=1 < server/migrations/002_assets.sql
+
+name: argus-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: argus
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-changeme}
+      POSTGRES_DB: argus
+    volumes:
+      - argus_pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U argus -d argus"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    environment:
+      API_PORT: "4000"
+      PG_HOST: postgres
+      PG_PORT: "5432"
+      PG_DATABASE: argus
+      PG_USER: argus
+      PG_PASSWORD: ${PG_PASSWORD:-changeme}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - api
+
+volumes:
+  argus_pgdata_prod:
