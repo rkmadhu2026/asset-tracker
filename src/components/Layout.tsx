@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Server, FileCode2, ShieldAlert, CheckCircle, Settings, Bell, User, ClipboardList, Building2, Menu, X, Network, Terminal, Layers, Activity, LogOut, Sparkles, Users, FileText } from 'lucide-react';
+import { LayoutDashboard, Server, FileCode2, ShieldAlert, CheckCircle, Settings, Bell, User, ClipboardList, Building2, Menu, X, Network, Terminal, Layers, Activity, LogOut, Sparkles, Users, FileText, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuth } from './AuthProvider';
@@ -29,7 +29,7 @@ const navItems = [
 export function Layout() {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, profile, signOut, isAdmin } = useAuth();
+  const { user, profile, signOut, isAdmin, apiSyncFailed } = useAuth();
   const { rootClients, selectedClientId, setSelectedClientId } = useClient();
 
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -207,6 +207,17 @@ export function Layout() {
             </div>
           </div>
         </header>
+
+        {apiSyncFailed && (
+          <div className="flex shrink-0 items-start gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-950 sm:items-center sm:text-sm dark:text-amber-50">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 sm:mt-0 dark:text-amber-400" aria-hidden />
+            <span>
+              Backend unreachable — signed in with Firebase only. Run{' '}
+              <code className="rounded bg-amber-500/20 px-1 py-0.5 font-mono text-[11px]">npm run server</code>{' '}
+              and ensure Postgres is up (<code className="rounded bg-amber-500/20 px-1 py-0.5 font-mono text-[11px]">npm run db:up</code>) to sync your profile and load CMDB data.
+            </span>
+          </div>
+        )}
 
         {/* Page Content */}
         <div className="flex-1 overflow-auto p-4 sm:p-6 bg-muted/10">

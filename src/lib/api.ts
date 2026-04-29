@@ -12,13 +12,30 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     method,
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${await token()}`,
+      Authorization: `Bearer ${await token()}`,
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (res.status === 204) return undefined as T;
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || res.statusText);
+  const text = await res.text();
+  let data: unknown = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      if (!res.ok) {
+        throw new Error(res.statusText || `Request failed (${res.status})`);
+      }
+      return undefined as T;
+    }
+  }
+  if (!res.ok) {
+    const msg =
+      typeof data === 'object' && data !== null && 'error' in data
+        ? String((data as { error: unknown }).error)
+        : res.statusText || `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
   return data as T;
 }
 

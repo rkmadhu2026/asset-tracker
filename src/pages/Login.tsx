@@ -98,6 +98,35 @@ function AuthHeroIllustration() {
   );
 }
 
+function mapFirebaseAuthError(err: unknown): string {
+  const code =
+    err && typeof err === 'object' && 'code' in err
+      ? String((err as { code?: string }).code)
+      : '';
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+      return 'Incorrect email or password.';
+    case 'auth/user-not-found':
+      return 'No account found for that email.';
+    case 'auth/email-already-in-use':
+      return 'That email is already registered.';
+    case 'auth/weak-password':
+      return 'Use a stronger password (at least 6 characters).';
+    case 'auth/invalid-email':
+      return 'Enter a valid email address.';
+    case 'auth/too-many-requests':
+      return 'Too many attempts. Try again in a few minutes.';
+    case 'auth/popup-closed-by-user':
+      return 'Sign-in was cancelled.';
+    case 'auth/popup-blocked':
+      return 'Pop-up was blocked. Allow pop-ups for this site.';
+    default:
+      if (err instanceof Error && err.message) return err.message;
+      return 'Something went wrong. Please try again.';
+  }
+}
+
 export function Login() {
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
@@ -126,8 +155,7 @@ export function Login() {
         await signInWithEmail(email, password);
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Authentication failed.';
-      setError(msg);
+      setError(mapFirebaseAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -139,8 +167,7 @@ export function Login() {
     try {
       await signInWithGoogle();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Google sign-in failed.';
-      setError(msg);
+      setError(mapFirebaseAuthError(err));
     } finally {
       setLoading(false);
     }

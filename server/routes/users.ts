@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { pool } from '../db.js';
 import { requireAuth, requireAdmin, type AuthedRequest } from '../middleware/auth.js';
 import type { Request } from 'express';
+import { ADMIN_BOOTSTRAP_EMAIL } from '../../config/bootstrap-admin.js';
 
 const router = Router();
 
@@ -11,10 +12,9 @@ router.post('/sync', requireAuth, async (req, res) => {
   const { uid, email } = req as AuthedRequest;
   const { display_name, photo_url } = req.body;
 
-  // Admin bootstrap — matches AuthProvider logic.
-  const ADMIN_EMAIL = 'rajkumarmadhu2024@gmail.com';
+  // Admin bootstrap — matches AuthProvider fallback profile.
   const { rows: existing } = await pool.query('SELECT role FROM users WHERE uid=$1', [uid]);
-  const role = existing.length ? existing[0].role : (email === ADMIN_EMAIL ? 'admin' : 'viewer');
+  const role = existing.length ? existing[0].role : (email === ADMIN_BOOTSTRAP_EMAIL ? 'admin' : 'viewer');
 
   const { rows } = await pool.query(`
     INSERT INTO users (uid, email, display_name, photo_url, role, last_login)
