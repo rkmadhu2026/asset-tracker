@@ -1,21 +1,46 @@
-# Postgres exposed on host port 5432 (stop other containers using 5432 first).
 services:
-  postgres:
+  db:
     image: postgres:16-alpine
-    container_name: argus-postgres
-    ports:
-      - "5432:5432"
     environment:
       POSTGRES_USER: argus
-      POSTGRES_PASSWORD: changeme
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-changeme}
       POSTGRES_DB: argus
     volumes:
-      - argus_pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
+      - ./server/migrations/001_initial.sql:/docker-entrypoint-initdb.d/01-initial.sql:ro
+      - ./server/migrations/002_assets.sql:/docker-entrypoint-initdb.d/02-assets.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U argus -d argus"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    environment:
+      PG_HOST: db
+      PG_PORT: "5432"
+      PG_DATABASE: argus
+      PG_USER: argus
+      PG_PASSWORD: ${PG_PASSWORD:-changeme}
+      API_PORT: "4000"
+      CORS_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8080}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+      args:
+        GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    depends_on:
+      - api
 
 volumes:
-  argus_pgdata:
+  pgdata:
