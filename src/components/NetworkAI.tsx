@@ -317,7 +317,7 @@ export function NetworkAI() {
                       {m.metadata?.image && (
                         <img src={m.metadata.image} alt="Uploaded" className="rounded-lg mb-2 max-w-full opacity-80" />
                       )}
-                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <div className="prose prose-sm max-w-none">
                         <ReactMarkdown>{m.content}</ReactMarkdown>
                       </div>
                       {m.metadata?.groundingChunks && (

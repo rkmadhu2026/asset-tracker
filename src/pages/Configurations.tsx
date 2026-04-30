@@ -298,9 +298,9 @@ export function Configurations() {
                         {h.created_at ? new Date(h.created_at).toLocaleString() : ''}
                       </div>
                       <div className="font-bold text-sm">Analysis Result:</div>
-                      <div className="text-sm prose prose-sm dark:prose-invert">{h.result}</div>
+                      <div className="text-sm prose prose-sm">{h.result}</div>
                       <div className="font-bold text-sm mt-2">Configuration:</div>
-                      <pre className="text-xs bg-black/50 p-2 rounded overflow-x-auto">{(h.details as any)?.config}</pre>
+                      <pre className="text-xs bg-muted p-2 rounded overflow-x-auto border border-border">{(h.details as any)?.config}</pre>
                     </div>
                   ))
                 )}
@@ -313,7 +313,7 @@ export function Configurations() {
                       <Sparkles className="w-4 h-4 mr-2" />
                       Gemini Analysis
                     </h4>
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <div className="prose prose-sm max-w-none">
                       {validationResult}
                     </div>
                   </div>
@@ -323,10 +323,10 @@ export function Configurations() {
                     <div 
                       key={idx} 
                       className={`flex items-center py-1 border-b border-border/50 last:border-0 ${
-                        line.type === 'added' ? 'bg-green-500/10 text-green-800 dark:bg-green-500/20 dark:text-green-300' : 
-                        line.type === 'removed' ? 'bg-red-500/10 text-red-800 dark:bg-red-500/20 dark:text-red-300' : 
-                        line.type === 'modified' ? 'bg-blue-500/10 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300' : 
-                        'text-slate-800 dark:text-slate-300 hover:bg-muted/50'
+                        line.type === 'added' ? 'bg-green-500/10 text-green-800' :
+                        line.type === 'removed' ? 'bg-red-500/10 text-red-800' :
+                        line.type === 'modified' ? 'bg-blue-500/10 text-blue-800' :
+                        'text-slate-800 hover:bg-muted/50'
                       }`}
                     >
                       <div className="flex items-center px-3">
@@ -347,9 +347,9 @@ export function Configurations() {
                         {line.line}
                       </div>
                       <div className={`w-8 text-center font-bold select-none text-xs ${
-                        line.type === 'added' ? 'text-green-600 dark:text-green-400' : 
-                        line.type === 'removed' ? 'text-red-600 dark:text-red-400' : 
-                        line.type === 'modified' ? 'text-blue-600 dark:text-blue-400' : 'text-transparent'
+                        line.type === 'added' ? 'text-green-600' :
+                        line.type === 'removed' ? 'text-red-600' :
+                        line.type === 'modified' ? 'text-blue-600' : 'text-transparent'
                       }`}>
                         {line.type === 'added' ? '+' : line.type === 'removed' ? '-' : line.type === 'modified' ? '•' : ' '}
                       </div>

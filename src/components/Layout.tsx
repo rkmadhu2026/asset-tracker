@@ -225,8 +225,8 @@ export function Layout() {
         </header>
 
         {apiSyncFailed && (
-          <div className="flex shrink-0 items-start gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-950 sm:items-center sm:text-sm dark:text-amber-50">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 sm:mt-0 dark:text-amber-400" aria-hidden />
+          <div className="flex shrink-0 items-start gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-950 sm:items-center sm:text-sm">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 sm:mt-0" aria-hidden />
             <span>
               Backend unreachable — signed in with Firebase only. Run{' '}
               <code className="rounded bg-amber-500/20 px-1 py-0.5 font-mono text-[11px]">npm run server</code>{' '}
