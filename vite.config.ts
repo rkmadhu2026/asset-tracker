@@ -16,6 +16,11 @@ export default defineConfig(({mode}) => {
       },
     },
     server: {
+      // Always this Argus app on 3000 — if something else uses 3000, fail loudly instead of
+      // silently jumping to 3001 (which feels like a “different app”).
+      port: 3000,
+      strictPort: true,
+      host: true,
       hmr: process.env.DISABLE_HMR !== 'true',
       proxy: {
         '/api': {
