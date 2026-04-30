@@ -35,12 +35,19 @@ export function Layout() {
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
   return (
-    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
-      {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex w-64 border-r bg-card flex-col shrink-0">
-        <div className="h-16 flex items-center px-6 border-b">
-          <Server className="w-6 h-6 text-primary mr-2" />
-          <span className="font-bold text-lg tracking-tight">Argus-asset-tracker</span>
+    <div className="flex h-screen w-full overflow-hidden bg-muted/30 text-foreground">
+      {/* Sidebar — Desktop */}
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-border/80 bg-gradient-to-b from-card via-card to-muted/30 shadow-[inset_-1px_0_0_rgba(0,0,0,0.03)] lg:flex">
+        <div className="flex h-16 shrink-0 items-center border-b border-border/70 px-6">
+          <Server className="mr-2 h-6 w-6 shrink-0 text-primary" strokeWidth={2} />
+          <div className="min-w-0">
+            <span className="font-[family-name:var(--font-display)] text-lg font-semibold leading-none tracking-tight text-foreground">
+              Argus
+            </span>
+            <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              Asset tracker
+            </p>
+          </div>
         </div>
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
@@ -50,10 +57,10 @@ export function Layout() {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                  isActive 
-                    ? "bg-primary/10 text-primary" 
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-primary/12 text-primary shadow-sm'
+                    : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground',
                 )}
               >
                 <item.icon className="w-5 h-5 mr-3" />
@@ -90,20 +97,27 @@ export function Layout() {
           className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm lg:hidden"
           onClick={toggleMobileMenu}
         >
-          <aside 
-            className="fixed inset-y-0 left-0 w-64 bg-card border-r shadow-xl flex flex-col"
+          <aside
+            className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-border/80 bg-gradient-to-b from-card via-card to-muted/30 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="h-16 flex items-center justify-between px-6 border-b">
-              <div className="flex items-center">
-                <Server className="w-6 h-6 text-primary mr-2" />
-                <span className="font-bold text-lg">Argus-asset-tracker</span>
+            <div className="flex h-16 shrink-0 items-center justify-between border-b border-border/70 px-6">
+              <div className="flex min-w-0 items-center">
+                <Server className="mr-2 h-6 w-6 shrink-0 text-primary" strokeWidth={2} />
+                <div className="min-w-0">
+                  <span className="font-[family-name:var(--font-display)] text-lg font-semibold leading-none tracking-tight">
+                    Argus
+                  </span>
+                  <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                    Asset tracker
+                  </p>
+                </div>
               </div>
               <Button variant="ghost" size="icon" onClick={toggleMobileMenu}>
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" />
               </Button>
             </div>
-            <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
@@ -112,10 +126,10 @@ export function Layout() {
                     to={item.path}
                     onClick={toggleMobileMenu}
                     className={cn(
-                      "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                      isActive 
-                        ? "bg-primary/10 text-primary" 
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-primary/12 text-primary shadow-sm'
+                        : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground',
                     )}
                   >
                     <item.icon className="w-5 h-5 mr-3" />
@@ -128,10 +142,10 @@ export function Layout() {
                   to="/users"
                   onClick={toggleMobileMenu}
                   className={cn(
-                    "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                    'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                     location.pathname === '/users'
-                      ? "bg-primary/10 text-primary" 
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? 'bg-primary/12 text-primary shadow-sm'
+                      : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground',
                   )}
                 >
                   <Users className="w-5 h-5 mr-3" />
@@ -146,7 +160,7 @@ export function Layout() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="h-16 border-b bg-card flex items-center justify-between px-4 sm:px-6 shrink-0">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border/80 bg-card/95 px-4 backdrop-blur-sm sm:px-6">
           <div className="flex items-center">
             <Button 
               variant="ghost" 
@@ -180,7 +194,9 @@ export function Layout() {
               <FileText className="w-4 h-4 mr-1.5" />
               Asset Details
             </Link>
-            <div className="sm:hidden font-bold text-primary">Argus-asset-tracker</div>
+            <div className="font-[family-name:var(--font-display)] sm:hidden text-lg font-semibold tracking-tight text-primary">
+              Argus
+            </div>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
             <button className="text-muted-foreground hover:text-foreground relative p-2">
@@ -220,7 +236,7 @@ export function Layout() {
         )}
 
         {/* Page Content */}
-        <div className="flex-1 overflow-auto p-4 sm:p-6 bg-muted/10">
+        <div className="flex-1 overflow-auto bg-gradient-to-b from-muted/20 to-background p-4 sm:p-6">
           <div className="max-w-7xl mx-auto">
             <Outlet />
           </div>

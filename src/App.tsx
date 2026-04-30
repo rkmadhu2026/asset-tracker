@@ -29,10 +29,15 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-medium text-muted-foreground">Initializing Argus-asset-tracker...</p>
+      <div className="flex h-screen w-screen items-center justify-center bg-gradient-to-br from-background via-muted/40 to-background">
+        <div className="flex flex-col items-center gap-5 rounded-2xl border border-border/80 bg-card/90 px-10 py-12 shadow-lg shadow-black/[0.04] backdrop-blur-sm">
+          <div className="h-11 w-11 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+          <div className="text-center">
+            <p className="font-[family-name:var(--font-display)] text-lg font-semibold tracking-tight text-foreground">
+              Argus
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">Loading workspace…</p>
+          </div>
         </div>
       </div>
     );
