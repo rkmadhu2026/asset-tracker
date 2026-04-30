@@ -46,8 +46,8 @@ router.post('/', requireAdmin, async (req, res) => {
     INSERT INTO infrastructure
       (id, name, vendor, model, type, status, site_id, rack_id, u_position,
        ip, mask, gateway, vlan, serial, firmware, uptime, cpu, memory, temp,
-       ports, last_backup, owner, criticality, purchase_date, warranty_expiry, assigned_to)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
+       ports, last_backup, owner, criticality, purchase_date, warranty_expiry, assigned_to, config)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
     RETURNING *
   `, [d.id, d.name, d.vendor, d.model, d.type, d.status||'Active',
       d.site_id||null, d.rack_id||null, d.u_position||null,
@@ -55,7 +55,8 @@ router.post('/', requireAdmin, async (req, res) => {
       d.serial||null, d.firmware||null, d.uptime||null,
       d.cpu||null, d.memory||null, d.temp||null, d.ports||null,
       d.last_backup||null, d.owner||null, d.criticality||null,
-      d.purchase_date||null, d.warranty_expiry||null, d.assigned_to||null]);
+      d.purchase_date||null, d.warranty_expiry||null, d.assigned_to||null,
+      d.config ?? null]);
 
   // Write audit log
   await pool.query(
@@ -74,8 +75,9 @@ router.put('/:id', requireAdmin, async (req, res) => {
       site_id=$6, rack_id=$7, u_position=$8,
       ip=$9, mask=$10, gateway=$11, vlan=$12, serial=$13, firmware=$14,
       uptime=$15, cpu=$16, memory=$17, temp=$18, ports=$19, last_backup=$20,
-      owner=$21, criticality=$22, purchase_date=$23, warranty_expiry=$24, assigned_to=$25
-    WHERE id=$26 RETURNING *
+      owner=$21, criticality=$22, purchase_date=$23, warranty_expiry=$24, assigned_to=$25,
+      config=$26
+    WHERE id=$27 RETURNING *
   `, [d.name, d.vendor, d.model, d.type, d.status,
       d.site_id||null, d.rack_id||null, d.u_position||null,
       d.ip||null, d.mask||null, d.gateway||null, d.vlan||null,
@@ -83,6 +85,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
       d.cpu||null, d.memory||null, d.temp||null, d.ports||null,
       d.last_backup||null, d.owner||null, d.criticality||null,
       d.purchase_date||null, d.warranty_expiry||null, d.assigned_to||null,
+      d.config ?? null,
       req.params.id]);
   if (!rows.length) { res.status(404).json({ error: 'Not found' }); return; }
 

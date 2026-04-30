@@ -13,6 +13,20 @@ import { useSite } from '../components/SiteProvider';
 import { useClient } from '../components/ClientProvider';
 import type { Site, SiteEnv } from '../types/inventory';
 
+type SiteStatus = NonNullable<Site['status']>;
+
+type SiteFormState = {
+  name: string;
+  env: SiteEnv;
+  region: string;
+  ip: string;
+  url: string;
+  domain: string;
+  status: SiteStatus;
+  notes: string;
+  clientIds: string[];
+};
+
 const ENV_COLOURS: Record<SiteEnv, string> = {
   PROD: 'success',
   DR: 'secondary',
@@ -21,10 +35,16 @@ const ENV_COLOURS: Record<SiteEnv, string> = {
   ISV: 'secondary',
 };
 
-const emptyForm = {
-  name: '', env: 'PROD' as SiteEnv, region: '',
-  ip: '', url: '', domain: '', status: 'Active', notes: '',
-  clientIds: [] as string[],
+const emptyForm: SiteFormState = {
+  name: '',
+  env: 'PROD',
+  region: '',
+  ip: '',
+  url: '',
+  domain: '',
+  status: 'Active',
+  notes: '',
+  clientIds: [],
 };
 
 export function Sites() {
@@ -54,9 +74,14 @@ export function Sites() {
   const openEdit = (s: Site) => {
     setEditing(s);
     setForm({
-      name: s.name, env: s.env, region: s.region || '',
-      ip: s.ip || '', url: s.url || '', domain: s.domain || '',
-      status: s.status || 'Active', notes: s.notes || '',
+      name: s.name,
+      env: s.env,
+      region: s.region || '',
+      ip: s.ip || '',
+      url: s.url || '',
+      domain: s.domain || '',
+      status: (s.status ?? 'Active') as SiteStatus,
+      notes: s.notes || '',
       clientIds: s.clientIds || [],
     });
     setErrors({});
@@ -74,7 +99,6 @@ export function Sites() {
     const e = validate();
     if (Object.keys(e).length > 0) { setErrors(e); return; }
 
-    const payload = { ...form, updatedAt: serverTimestamp() };
     try {
       const apiPayload = { ...form, client_ids: form.clientIds };
       if (editing) {
@@ -280,7 +304,7 @@ export function Sites() {
             <div className="grid grid-cols-4 items-center gap-4">
               <Label className="text-right">Status</Label>
               <div className="col-span-3">
-                <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
+                <Select value={form.status} onValueChange={v => setForm({ ...form, status: v as SiteStatus })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Active">Active</SelectItem>

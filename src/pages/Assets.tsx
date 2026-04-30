@@ -19,7 +19,22 @@ import {
   AppWindow, Layers
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { storage, ref, uploadBytes, getDownloadURL } from '../firebase';
+import {
+  storage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  db,
+  collection,
+  query,
+  where,
+  onSnapshot,
+  setDoc,
+  doc,
+  addDoc,
+  serverTimestamp,
+} from '../firebase';
+import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { assetsApi } from '../lib/api';
 import { GoogleGenAI } from "@google/genai";
 import Markdown from 'react-markdown';

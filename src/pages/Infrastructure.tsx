@@ -27,7 +27,7 @@ import { DeviceTemplates } from '@/components/DeviceTemplates';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { storage, ref, uploadBytes, getDownloadURL } from '../firebase';
-import { infrastructureApi } from '../lib/api';
+import { infrastructureApi, type Device } from '../lib/api';
 import ReactFlow, { Background, Controls, MiniMap, MarkerType, Handle, Position } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -1012,7 +1012,9 @@ export function Infrastructure() {
       .then(rows => {
         if (rows.length === 0 && selectedClientId) {
           Promise.all(
-            initialInfrastructureDevices.map(d => infrastructureApi.create({ ...d }))
+            initialInfrastructureDevices.map((d) =>
+              infrastructureApi.create(d as Omit<Device, 'id'> & { id: string })
+            )
           ).then(() => infrastructureApi.list({ clientId: selectedClientId })).then(setDevices).catch(console.error);
         } else {
           setDevices(rows);

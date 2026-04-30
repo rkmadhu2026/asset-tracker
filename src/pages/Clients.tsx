@@ -69,7 +69,6 @@ export function Clients() {
     const payload = {
       ...form,
       parentClientId: form.parentClientId || null,
-      updatedAt: serverTimestamp(),
     };
 
     try {
