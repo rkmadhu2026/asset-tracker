@@ -35,10 +35,10 @@ export function Layout() {
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
   return (
-      <div className="flex h-screen w-full overflow-hidden bg-[#f7f5f0] text-foreground">
+      <div className="flex h-screen w-full overflow-hidden bg-slate-50 text-foreground">
       {/* Sidebar — Desktop */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-[#e8e4dc] bg-gradient-to-b from-[#fdfcfa] via-[#faf8f5] to-[#f3f0ea] shadow-[inset_-1px_0_0_rgba(41,37,36,0.04)] lg:flex">
-        <div className="flex h-16 shrink-0 items-center border-b border-[#ebe7df] px-6">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-gradient-to-b from-white via-slate-50 to-slate-100 shadow-sm lg:flex">
+        <div className="flex h-16 shrink-0 items-center border-b border-slate-200 px-6">
           <Server className="mr-2 h-6 w-6 shrink-0 text-primary" strokeWidth={2} />
           <div className="min-w-0">
             <span className="font-[family-name:var(--font-display)] text-lg font-semibold leading-none tracking-tight text-foreground">
@@ -98,10 +98,10 @@ export function Layout() {
           onClick={toggleMobileMenu}
         >
           <aside
-            className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-[#e8e4dc] bg-gradient-to-b from-[#fdfcfa] via-[#faf8f5] to-[#f3f0ea] shadow-xl"
+            className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-slate-200 bg-gradient-to-b from-white via-slate-50 to-slate-100 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex h-16 shrink-0 items-center justify-between border-b border-[#ebe7df] px-6">
+            <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-6">
               <div className="flex min-w-0 items-center">
                 <Server className="mr-2 h-6 w-6 shrink-0 text-primary" strokeWidth={2} />
                 <div className="min-w-0">
@@ -160,7 +160,7 @@ export function Layout() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#ebe7df] bg-[#fdfcfa]/95 px-4 backdrop-blur-sm sm:px-6">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur-sm sm:px-6">
           <div className="flex items-center">
             <Button 
               variant="ghost" 

@@ -8,7 +8,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGri
 import { ClipboardList } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { assetsApi, driftsApi } from '../lib/api';
+import { assetsApi, driftsApi, infrastructureApi } from '../lib/api';
 import { useClient } from '@/components/ClientProvider';
 
 const recentLogs = [
@@ -43,6 +43,7 @@ const vendorData = [
 export function Dashboard() {
   const [drifts, setDrifts] = useState<any[]>([]);
   const [assetsCount, setAssetsCount] = useState(0);
+  const [devices, setDevices] = useState<any[]>([]);
   const [activeDashboardTab, setActiveDashboardTab] = useState('overview');
   const { selectedClientId } = useClient();
 
@@ -52,6 +53,9 @@ export function Dashboard() {
       .catch(console.error);
     driftsApi.list({ status: 'Open' })
       .then(setDrifts)
+      .catch(console.error);
+    infrastructureApi.list(selectedClientId ? { clientId: selectedClientId } : {})
+      .then(setDevices)
       .catch(console.error);
   }, [selectedClientId]);
 
@@ -68,15 +72,37 @@ export function Dashboard() {
     { name: 'Slack', licenses: 1200, used: 1180, compliance: 98 },
   ];
 
-  const assetTypeData = [
-    { name: 'Firewalls', count: 12, healthy: 11, risk: 'Low', fill: '#ef4444' },
-    { name: 'Routers', count: 45, healthy: 42, risk: 'Medium', fill: '#3b82f6' },
-    { name: 'Servers', count: 156, healthy: 150, risk: 'Low', fill: '#22c55e' },
-    { name: 'Switches', count: 88, healthy: 85, risk: 'Low', fill: '#8b5cf6' },
-    { name: 'Storage', count: 24, healthy: 24, risk: 'Low', fill: '#f59e0b' },
-  ];
+  const COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#8b5cf6', '#f59e0b', '#06b6d4', '#ec4899'];
 
-  const COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#8b5cf6', '#f59e0b'];
+  // Real computed stats from loaded devices
+  const typeCounts = devices.reduce((acc: Record<string, number>, d) => {
+    acc[d.type] = (acc[d.type] || 0) + 1; return acc;
+  }, {});
+  const vendorCounts = devices.reduce((acc: Record<string, number>, d) => {
+    const v = d.vendor || 'Unknown';
+    acc[v] = (acc[v] || 0) + 1; return acc;
+  }, {});
+
+  const assetTypeData = [
+    { name: 'Firewalls', count: typeCounts['Firewall'] || 0, fill: '#ef4444' },
+    { name: 'Routers',   count: typeCounts['Router']   || 0, fill: '#3b82f6' },
+    { name: 'Servers',   count: (typeCounts['Server']  || 0) + (typeCounts['VM'] || 0), fill: '#22c55e' },
+    { name: 'Switches',  count: typeCounts['Switch']   || 0, fill: '#8b5cf6' },
+    { name: 'Storage',   count: typeCounts['Storage']  || 0, fill: '#f59e0b' },
+    { name: 'Power',     count: typeCounts['Power']    || 0, fill: '#06b6d4' },
+    { name: 'Other',     count: typeCounts['Device']   || 0, fill: '#ec4899' },
+  ].filter(d => d.count > 0);
+
+  const VENDOR_COLORS: Record<string, string> = {
+    Cisco: '#0043ce', Aruba: '#ff8300', Arista: '#00a3e0', HP: '#00b388',
+    Dell: '#007db8', Huawei: '#ed1c24', Fortinet: '#ee3124', Canonical: '#e95420',
+    Microsoft: '#0078d4', 'Red Hat': '#cc0000',
+  };
+  const liveVendorData = Object.entries(vendorCounts)
+    .filter(([v]) => v !== 'Unknown' && v !== '')
+    .sort((a, b) => (b[1] as number) - (a[1] as number))
+    .slice(0, 7)
+    .map(([name, count]) => ({ name, count: count as number, fill: VENDOR_COLORS[name] || '#64748b' }));
 
   const networkPerformanceData = [
     { time: '00:00', throughput: 45, latency: 12 },
@@ -125,8 +151,8 @@ export function Dashboard() {
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{assetsCount > 0 ? assetsCount : '1,248'}</div>
-            <p className="text-xs text-muted-foreground mt-1">+12 from last week</p>
+            <div className="text-2xl font-bold">{assetsCount + devices.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">{devices.length} infra · {assetsCount} CIs</p>
           </CardContent>
         </Card>
         <Card>
@@ -169,12 +195,12 @@ export function Dashboard() {
             <Shield className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">{typeCounts['Firewall'] || 0}</div>
             <div className="flex items-center justify-between mt-2">
-              <span className="text-xs text-muted-foreground">Health: 11/12</span>
-              <Badge variant="success" className="text-[10px]">92% OK</Badge>
+              <span className="text-xs text-muted-foreground">Security devices</span>
+              <Badge variant="success" className="text-[10px]">Active</Badge>
             </div>
-            <Progress value={92} className="h-1 mt-2" indicatorClassName="bg-red-500" />
+            <Progress value={100} className="h-1 mt-2" indicatorClassName="bg-red-500" />
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-blue-500">
@@ -183,26 +209,26 @@ export function Dashboard() {
             <Router className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">45</div>
+            <div className="text-2xl font-bold">{typeCounts['Router'] || 0}</div>
             <div className="flex items-center justify-between mt-2">
-              <span className="text-xs text-muted-foreground">Health: 42/45</span>
-              <Badge variant="warning" className="text-[10px]">93% OK</Badge>
+              <span className="text-xs text-muted-foreground">Network routing</span>
+              <Badge variant="success" className="text-[10px]">Active</Badge>
             </div>
-            <Progress value={93} className="h-1 mt-2" indicatorClassName="bg-blue-500" />
+            <Progress value={100} className="h-1 mt-2" indicatorClassName="bg-blue-500" />
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-green-500">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Servers</CardTitle>
+            <CardTitle className="text-sm font-medium">Servers & VMs</CardTitle>
             <DatabaseIcon className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">156</div>
+            <div className="text-2xl font-bold">{(typeCounts['Server'] || 0) + (typeCounts['VM'] || 0)}</div>
             <div className="flex items-center justify-between mt-2">
-              <span className="text-xs text-muted-foreground">Health: 150/156</span>
-              <Badge variant="success" className="text-[10px]">96% OK</Badge>
+              <span className="text-xs text-muted-foreground">{typeCounts['Server'] || 0} physical · {typeCounts['VM'] || 0} VMs</span>
+              <Badge variant="success" className="text-[10px]">Active</Badge>
             </div>
-            <Progress value={96} className="h-1 mt-2" indicatorClassName="bg-green-500" />
+            <Progress value={100} className="h-1 mt-2" indicatorClassName="bg-green-500" />
           </CardContent>
         </Card>
       </div>
@@ -360,27 +386,29 @@ export function Dashboard() {
                 <CardDescription className="text-slate-400">Standardization metrics and model distribution across infrastructure.</CardDescription>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Badge variant="outline" className="bg-slate-950 border-slate-700 text-slate-300">Total Manufacturers: 12</Badge>
-                <Badge variant="outline" className="bg-slate-950 border-slate-700 text-green-400">Standardized Models: 84%</Badge>
+                <Badge variant="outline" className="bg-slate-950 border-slate-700 text-slate-300">Total Manufacturers: {Object.keys(vendorCounts).filter(v => v !== 'Unknown' && v !== '').length}</Badge>
+                <Badge variant="outline" className="bg-slate-950 border-slate-700 text-green-400">Total Devices: {devices.length}</Badge>
               </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-x divide-slate-800 border-b border-slate-800 bg-slate-950">
-              {vendorData.map((vendor) => (
+              {liveVendorData.map((vendor) => (
                 <div key={vendor.name} className="p-6 hover:bg-slate-900/50 transition-colors group">
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{vendor.name}</span>
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: vendor.fill }}></div>
                   </div>
-                  <div className="text-3xl font-bold text-white mb-2">{vendor.count}</div>
+                  <div className="text-3xl font-bold text-white mb-2">{vendor.count as number}</div>
                   <div className="space-y-2">
-                    {vendor.models.map(model => (
-                      <div key={model} className="flex items-center justify-between text-[10px]">
-                        <span className="text-slate-500 truncate mr-2">{model}</span>
-                        <span className="text-slate-400 font-mono">{(Math.random() * 40 + 10).toFixed(0)}%</span>
-                      </div>
-                    ))}
+                    {devices.filter(d => d.vendor === vendor.name).slice(0, 4)
+                      .map((d, i) => (
+                        <div key={i} className="flex items-center justify-between text-[10px]">
+                          <span className="text-slate-500 truncate mr-2">{d.model || d.name}</span>
+                          <span className="text-slate-400 font-mono">{d.type}</span>
+                        </div>
+                      ))
+                    }
                   </div>
                   <div className="mt-4 pt-4 border-t border-slate-800 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="ghost" size="sm" className="w-full text-[10px] h-7 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10">
@@ -403,7 +431,7 @@ export function Dashboard() {
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={vendorData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+              <BarChart data={liveVendorData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e5e7eb" />
                 <XAxis type="number" hide />
                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} fontSize={12} />
@@ -498,10 +526,10 @@ export function Dashboard() {
                 <Shield className="h-4 w-4 text-red-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">12</div>
+                <div className="text-2xl font-bold">{typeCounts['Firewall'] || 0}</div>
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-muted-foreground">Active: 11 | Standby: 1</span>
-                  <Badge variant="success" className="text-[10px]">92% OK</Badge>
+                  <span className="text-xs text-muted-foreground">Security perimeter</span>
+                  <Badge variant="success" className="text-[10px]">Active</Badge>
                 </div>
               </CardContent>
             </Card>
@@ -511,10 +539,10 @@ export function Dashboard() {
                 <Router className="h-4 w-4 text-blue-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">45</div>
+                <div className="text-2xl font-bold">{typeCounts['Router'] || 0}</div>
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-muted-foreground">Active: 42 | Maintenance: 3</span>
-                  <Badge variant="warning" className="text-[10px]">93% OK</Badge>
+                  <span className="text-xs text-muted-foreground">Core routing</span>
+                  <Badge variant="success" className="text-[10px]">Active</Badge>
                 </div>
               </CardContent>
             </Card>
@@ -524,9 +552,9 @@ export function Dashboard() {
                 <Zap className="h-4 w-4 text-purple-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">88</div>
+                <div className="text-2xl font-bold">{typeCounts['Switch'] || 0}</div>
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-muted-foreground">Access: 70 | Core: 18</span>
+                  <span className="text-xs text-muted-foreground">Network switching</span>
                   <Badge variant="success" className="text-[10px]">97% OK</Badge>
                 </div>
               </CardContent>
@@ -597,9 +625,9 @@ export function Dashboard() {
                 <DatabaseIcon className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">156</div>
+                <div className="text-2xl font-bold">{(typeCounts['Server'] || 0) + (typeCounts['VM'] || 0)}</div>
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-muted-foreground">Physical: 45 | Virtual: 111</span>
+                  <span className="text-xs text-muted-foreground">Physical: {typeCounts['Server'] || 0} | VM: {typeCounts['VM'] || 0}</span>
                   <Badge variant="success" className="text-[10px]">96% OK</Badge>
                 </div>
               </CardContent>
@@ -610,9 +638,9 @@ export function Dashboard() {
                 <HardDrive className="h-4 w-4 text-orange-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">24</div>
+                <div className="text-2xl font-bold">{typeCounts['Storage'] || 0}</div>
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-muted-foreground">Total Capacity: 1.2 PB</span>
+                  <span className="text-xs text-muted-foreground">Storage arrays</span>
                   <Badge variant="success" className="text-[10px]">100% OK</Badge>
                 </div>
               </CardContent>
