@@ -109,6 +109,8 @@ export interface Device {
   purchase_date?: string;
   warranty_expiry?: string;
   assigned_to?: string;
+  /** Raw device configuration text (CLI / running config). */
+  config?: string;
   created_at?: string;
   updated_at?: string;
 }
