@@ -3,8 +3,12 @@ import admin from 'firebase-admin';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+const AUTH_BYPASS = process.env.AUTH_BYPASS === 'true';
+const BYPASS_UID = 'dev-bypass';
+const BYPASS_EMAIL = 'dev@local';
+
 // Initialise Firebase Admin once — reuse if already initialised.
-if (!admin.apps.length) {
+if (!AUTH_BYPASS && !admin.apps.length) {
   const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
   if (credPath) {
     admin.initializeApp({ credential: admin.credential.applicationDefault() });
@@ -17,6 +21,10 @@ if (!admin.apps.length) {
   }
 }
 
+if (AUTH_BYPASS) {
+  console.warn('[auth] AUTH_BYPASS=true — all requests treated as admin. NEVER enable in production.');
+}
+
 export interface AuthedRequest extends Request {
   uid: string;
   email: string | undefined;
@@ -24,6 +32,13 @@ export interface AuthedRequest extends Request {
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (AUTH_BYPASS) {
+    (req as AuthedRequest).uid = BYPASS_UID;
+    (req as AuthedRequest).email = BYPASS_EMAIL;
+    (req as AuthedRequest).role = 'admin';
+    next();
+    return;
+  }
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
     res.status(401).json({ error: 'Missing Authorization header' });
@@ -41,6 +56,13 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 }
 
 export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (AUTH_BYPASS) {
+    (req as AuthedRequest).uid = BYPASS_UID;
+    (req as AuthedRequest).email = BYPASS_EMAIL;
+    (req as AuthedRequest).role = 'admin';
+    next();
+    return;
+  }
   await requireAuth(req, res, async () => {
     const { pool } = await import('../db.js');
     const { rows } = await pool.query('SELECT role FROM users WHERE uid = $1', [(req as AuthedRequest).uid]);

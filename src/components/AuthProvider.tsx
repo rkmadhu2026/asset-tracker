@@ -69,6 +69,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isViewer = true;
 
   useEffect(() => {
+    if (process.env.AUTH_BYPASS === 'true') {
+      console.warn('[auth] AUTH_BYPASS=true — skipping Firebase, using local dev admin.');
+      const fakeUser = {
+        uid: 'dev-bypass',
+        email: 'dev@local',
+        displayName: 'Local Dev',
+        photoURL: null,
+        getIdToken: async () => 'bypass',
+      } as unknown as User;
+      setUser(fakeUser);
+      setProfile({
+        uid: 'dev-bypass',
+        email: 'dev@local',
+        displayName: 'Local Dev',
+        photoURL: null,
+        role: 'admin',
+        lastLogin: new Date().toISOString(),
+      });
+      setLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setApiSyncFailed(false);

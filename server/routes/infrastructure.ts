@@ -7,7 +7,7 @@ const router = Router();
 
 // GET /api/infrastructure?siteId=&status=&type=&search=&limit=&offset=
 router.get('/', requireAuth, async (req, res) => {
-  const { siteId, clientId, status, type, search, limit = '100', offset = '0' } = req.query as Record<string, string>;
+  const { siteId, clientId, status, type, search, limit = '1000', offset = '0' } = req.query as Record<string, string>;
   const conditions: string[] = [];
   const params: unknown[] = [];
   let fromClause = 'infrastructure i';

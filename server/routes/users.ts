@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { pool } from '../db.js';
 import { requireAuth, requireAdmin, type AuthedRequest } from '../middleware/auth.js';
 import type { Request } from 'express';
-import { ADMIN_BOOTSTRAP_EMAIL } from '../../config/bootstrap-admin.js';
+const ADMIN_BOOTSTRAP_EMAIL = process.env.ADMIN_BOOTSTRAP_EMAIL || 'rajkumarmadhu2024@gmail.com';
 
 const router = Router();
 

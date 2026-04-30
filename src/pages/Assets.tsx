@@ -24,17 +24,7 @@ import {
   ref,
   uploadBytes,
   getDownloadURL,
-  db,
-  collection,
-  query,
-  where,
-  onSnapshot,
-  setDoc,
-  doc,
-  addDoc,
-  serverTimestamp,
 } from '../firebase';
-import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { assetsApi } from '../lib/api';
 import { GoogleGenAI } from "@google/genai";
 import Markdown from 'react-markdown';
@@ -128,108 +118,76 @@ export function Assets() {
   const [assetDocuments, setAssetDocuments] = useState<AssetDocument[]>([]);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [assetsData, setAssetsData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const { selectedClientId } = useClient();
 
-  useEffect(() => {
-    if (!selectedClientId) return;
-
-    const q = query(collection(db, 'assets'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const dbAssets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      if (dbAssets.length === 0) {
-        // Seed initial data
-        assets.forEach(async (asset) => {
-          await setDoc(doc(db, 'assets', asset.id), { ...asset, tenantId: selectedClientId });
-        });
-      } else {
-        setAssetsData(dbAssets.filter((a: any) => a.tenantId === selectedClientId || !a.tenantId));
-      }
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'assets');
-    });
-    return () => unsubscribe();
-  }, [selectedClientId]);
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'asset_types'), (snapshot) => {
-      const types = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssetType));
-      setAssetTypes(types);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'asset_types');
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'device_types'), (snapshot) => {
-      const types = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setDeviceTypes(types);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'device_types');
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!selectedAsset) {
-      setAssetDocuments([]);
-      return;
+  const refreshAssets = async (clientId: string | null) => {
+    setIsLoading(true);
+    try {
+      const rows = await assetsApi.list(clientId ? { clientId } : {});
+      setAssetsData(rows);
+    } catch (e) {
+      console.error('Failed to load assets:', e);
+    } finally {
+      setIsLoading(false);
     }
-    const q = query(collection(db, 'asset_documents'), where('assetId', '==', selectedAsset.id));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssetDocument));
-      setAssetDocuments(docs);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'asset_documents');
-    });
-    return () => unsubscribe();
+  };
+
+  useEffect(() => { refreshAssets(selectedClientId); }, [selectedClientId]);
+
+  useEffect(() => {
+    assetsApi.listTypes().then(setAssetTypes).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    assetsApi.listDeviceTypes().then(setDeviceTypes).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedAsset) { setAssetDocuments([]); return; }
+    assetsApi.listDocs(selectedAsset.id).then(rows =>
+      setAssetDocuments(rows.map((r: any) => ({
+        id: r.id, assetId: r.asset_id, name: r.name,
+        type: r.type || '', url: r.url, uploadedAt: r.created_at,
+      })))
+    ).catch(console.error);
   }, [selectedAsset]);
 
   const handleDocumentUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !selectedAsset) return;
-
     setIsUploadingDoc(true);
     try {
-      const docRef = ref(storage, `assets/${selectedAsset.id}/${file.name}`);
-      await uploadBytes(docRef, file);
-      const downloadUrl = await getDownloadURL(docRef);
-
-      await addDoc(collection(db, 'asset_documents'), {
-        assetId: selectedAsset.id,
-        name: file.name,
-        type: file.type,
-        url: downloadUrl,
-        uploadedAt: serverTimestamp()
-      });
-      alert(`Successfully uploaded ${file.name}`);
+      const storageRef = ref(storage, `assets/${selectedAsset.id}/${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      await assetsApi.addDoc(selectedAsset.id, { name: file.name, url, type: file.type });
+      const rows = await assetsApi.listDocs(selectedAsset.id);
+      setAssetDocuments(rows.map((r: any) => ({
+        id: r.id, assetId: r.asset_id, name: r.name,
+        type: r.type || '', url: r.url, uploadedAt: r.created_at,
+      })));
     } catch (error) {
-      console.error("Error uploading document:", error);
-      alert("Failed to upload document.");
+      console.error('Error uploading document:', error);
+      alert('Failed to upload document.');
     } finally {
       setIsUploadingDoc(false);
-      if (event.target) {
-        event.target.value = '';
-      }
+      if (event.target) event.target.value = '';
     }
   };
 
   const handleAddAssetType = async () => {
     if (!newTypeName.trim()) return;
-    await addDoc(collection(db, 'asset_types'), {
-      name: newTypeName,
-      createdAt: serverTimestamp()
-    });
+    await assetsApi.addType(newTypeName);
+    assetsApi.listTypes().then(setAssetTypes);
     setNewTypeName('');
     setIsAddTypeOpen(false);
   };
 
   const handleAddDeviceType = async () => {
     if (!newDeviceTypeName.trim()) return;
-    await addDoc(collection(db, 'device_types'), {
-      name: newDeviceTypeName,
-      createdAt: serverTimestamp()
-    });
+    await assetsApi.addDeviceType(newDeviceTypeName);
+    assetsApi.listDeviceTypes().then(setDeviceTypes);
     setNewDeviceTypeName('');
     setIsAddDeviceTypeOpen(false);
   };
@@ -250,9 +208,9 @@ export function Assets() {
   }, [searchTerm]);
 
   const filteredAssets = assetsData.filter(asset => {
-    const matchesSearch = asset.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
-      asset.ip.includes(debouncedSearchTerm) ||
-      asset.serial?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+    const matchesSearch = asset.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      (asset.ip || '').includes(debouncedSearchTerm) ||
+      (asset.serial || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
       asset.tags?.some((tag: string) => tag.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
     
     const matchesVendor = vendorFilter === 'All Vendors' || asset.manufacturer === vendorFilter;
@@ -283,6 +241,41 @@ export function Assets() {
       case 'Firewall': return <ShieldAlert className="w-4 h-4 text-red-500" />;
       case 'Server': return <Server className="w-4 h-4 text-green-500" />;
       default: return <HardDrive className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const [newAsset, setNewAsset] = useState({
+    id: '', name: '', type: '', manufacturer: '', model: '',
+    status: 'Active', ip: '', serial: '', os: '', owner: '', warranty: '', risk: 0,
+  });
+  const [isSavingAsset, setIsSavingAsset] = useState(false);
+
+  const handleSaveAsset = async () => {
+    if (!newAsset.name.trim()) return;
+    setIsSavingAsset(true);
+    try {
+      const id = newAsset.id.trim() || `AS-${Date.now()}`;
+      await assetsApi.create({ ...newAsset, id, client_id: selectedClientId || undefined });
+      await refreshAssets(selectedClientId);
+      setIsAddAssetOpen(false);
+      setNewAsset({ id: '', name: '', type: '', manufacturer: '', model: '', status: 'Active', ip: '', serial: '', os: '', owner: '', warranty: '', risk: 0 });
+    } catch (error) {
+      console.error('Error saving asset:', error);
+      alert('Failed to save asset.');
+    } finally {
+      setIsSavingAsset(false);
+    }
+  };
+
+  const handleDeleteAsset = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Delete this asset?')) return;
+    try {
+      await assetsApi.delete(id);
+      await refreshAssets(selectedClientId);
+    } catch (error) {
+      console.error('Error deleting asset:', error);
+      alert('Failed to delete asset.');
     }
   };
 
@@ -353,19 +346,15 @@ export function Assets() {
 
   const handleBulkUpdate = async () => {
     if (!bulkUpdateValue) return;
-    
     try {
-      const updatePromises = selectedAssetIds.map(id => 
-        setDoc(doc(db, 'assets', id), { [bulkActionType]: bulkUpdateValue }, { merge: true })
-      );
-      await Promise.all(updatePromises);
+      await assetsApi.bulkUpdate(selectedAssetIds, bulkActionType, bulkUpdateValue);
+      await refreshAssets(selectedClientId);
       setSelectedAssetIds([]);
       setIsBulkEditOpen(false);
       setBulkUpdateValue('');
-      alert(`Successfully updated ${selectedAssetIds.length} assets.`);
     } catch (error) {
-      console.error("Error performing bulk update:", error);
-      alert("Failed to update assets. Please try again.");
+      console.error('Error performing bulk update:', error);
+      alert('Failed to update assets. Please try again.');
     }
   };
 
@@ -1060,33 +1049,35 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
               <h3 className="text-lg font-medium mb-4 border-b pb-2">General Information</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Device Belongs TO</label>
-                  <Input placeholder="e.g. IT Dept" />
+                  <label className="text-sm font-medium">Owner / Belongs To</label>
+                  <Input placeholder="e.g. IT Dept" value={newAsset.owner} onChange={e => setNewAsset(p => ({ ...p, owner: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Device Assigned TO</label>
-                  <Input placeholder="e.g. John Doe" />
+                  <label className="text-sm font-medium">Serial Number</label>
+                  <Input placeholder="e.g. SN-12345" value={newAsset.serial} onChange={e => setNewAsset(p => ({ ...p, serial: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Asset TAG</label>
-                  <Input placeholder="e.g. TAG-12345" />
+                  <label className="text-sm font-medium">Asset ID / Tag</label>
+                  <Input placeholder="e.g. AS-1099 (auto-generated if blank)" value={newAsset.id} onChange={e => setNewAsset(p => ({ ...p, id: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Hostname</label>
-                  <Input placeholder="e.g. srv-prod-01" />
+                  <label className="text-sm font-medium">Hostname / Name <span className="text-red-500">*</span></label>
+                  <Input placeholder="e.g. srv-prod-01" value={newAsset.name} onChange={e => setNewAsset(p => ({ ...p, name: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Device Type</label>
-                  <Input placeholder="e.g. Server, Switch" />
+                  <Input placeholder="e.g. Server, Switch" value={newAsset.type} onChange={e => setNewAsset(p => ({ ...p, type: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Deployment Status</label>
-                  <Select onValueChange={() => {}}>
+                  <Select value={newAsset.status} onValueChange={v => setNewAsset(p => ({ ...p, status: v }))}>
                     <SelectTrigger><SelectValue placeholder="Select Status" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="maintenance">Maintenance</SelectItem>
-                      <SelectItem value="retired">Retired</SelectItem>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Warning">Warning</SelectItem>
+                      <SelectItem value="Critical">Critical</SelectItem>
+                      <SelectItem value="In Stock">In Stock</SelectItem>
+                      <SelectItem value="Disposed">Disposed</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1098,105 +1089,51 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
               <h3 className="text-lg font-medium mb-4 border-b pb-2">Hardware Details</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Device Brand</label>
-                  <Input placeholder="e.g. Dell, Cisco" />
+                  <label className="text-sm font-medium">Manufacturer / Brand</label>
+                  <Input placeholder="e.g. Dell, Cisco" value={newAsset.manufacturer} onChange={e => setNewAsset(p => ({ ...p, manufacturer: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Model</label>
-                  <Input placeholder="e.g. PowerEdge R740" />
+                  <Input placeholder="e.g. PowerEdge R740" value={newAsset.model} onChange={e => setNewAsset(p => ({ ...p, model: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">OS</label>
-                  <Input placeholder="e.g. Windows Server 2022" />
+                  <label className="text-sm font-medium">OS / Firmware</label>
+                  <Input placeholder="e.g. Windows Server 2022" value={newAsset.os} onChange={e => setNewAsset(p => ({ ...p, os: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">RAM Model with Capacity</label>
-                  <Input placeholder="e.g. DDR4 3200MHz 16GB" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Total RAM</label>
-                  <Input placeholder="e.g. 128GB" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">CPU Model with Capacity</label>
-                  <Input placeholder="e.g. Intel Xeon Gold 6230 2.1G" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Total CPU</label>
-                  <Input placeholder="e.g. 40 Cores" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">HardDisk Model with Capacity</label>
-                  <Input placeholder="e.g. SSD SAS 1.92TB" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Total HardDisk</label>
-                  <Input placeholder="e.g. 15.36TB" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Number of Power Supply</label>
-                  <Input type="number" min="1" placeholder="e.g. 2" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Each Power supply Capacity</label>
-                  <Input placeholder="e.g. 750W" />
+                  <label className="text-sm font-medium">Risk Score (0–100)</label>
+                  <Input type="number" min="0" max="100" placeholder="e.g. 15" value={newAsset.risk || ''} onChange={e => setNewAsset(p => ({ ...p, risk: Number(e.target.value) }))} />
                 </div>
               </div>
             </div>
 
-            {/* Network & Location */}
+            {/* Network */}
             <div>
-              <h3 className="text-lg font-medium mb-4 border-b pb-2">Network & Location</h3>
+              <h3 className="text-lg font-medium mb-4 border-b pb-2">Network</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">LAN/DMZ IP</label>
-                  <Input placeholder="e.g. 10.0.0.10" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">ILO IP</label>
-                  <Input placeholder="e.g. 10.0.1.10" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Location</label>
-                  <Input placeholder="e.g. New York" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Datacenter/Office details</label>
-                  <Input placeholder="e.g. DC-01" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Rack Number</label>
-                  <Input placeholder="e.g. R-05" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">U-Space</label>
-                  <Input placeholder="e.g. 10U-12U" />
+                  <label className="text-sm font-medium">IP Address</label>
+                  <Input placeholder="e.g. 10.0.0.10" value={newAsset.ip} onChange={e => setNewAsset(p => ({ ...p, ip: e.target.value }))} />
                 </div>
               </div>
             </div>
 
-            {/* Financial & Licensing */}
+            {/* Warranty */}
             <div>
-              <h3 className="text-lg font-medium mb-4 border-b pb-2">Financial & Licensing</h3>
+              <h3 className="text-lg font-medium mb-4 border-b pb-2">Warranty</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">PO Number</label>
-                  <Input placeholder="e.g. PO-98765" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Warranty Details</label>
-                  <Input placeholder="e.g. 3 Years NBD" />
-                </div>
-                <div className="space-y-2 col-span-2">
-                  <label className="text-sm font-medium">Additional License information</label>
-                  <Input placeholder="e.g. Enterprise Plus License" />
+                  <label className="text-sm font-medium">Warranty / AMC Expiry</label>
+                  <Input placeholder="e.g. 2027-12-31" value={newAsset.warranty} onChange={e => setNewAsset(p => ({ ...p, warranty: e.target.value }))} />
                 </div>
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddAssetOpen(false)}>Cancel</Button>
-            <Button onClick={() => setIsAddAssetOpen(false)}>Save Asset</Button>
+            <Button onClick={handleSaveAsset} disabled={isSavingAsset || !newAsset.name.trim()}>
+              {isSavingAsset ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : 'Save Asset'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1647,7 +1584,21 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAssets.map((asset) => (
+                    {isLoading && (
+                      <TableRow>
+                        <TableCell colSpan={11} className="py-10 text-center text-muted-foreground">
+                          <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {!isLoading && filteredAssets.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={11} className="py-10 text-center text-muted-foreground text-sm">
+                          No assets found.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {!isLoading && filteredAssets.map((asset) => (
                       <TableRow 
                         key={asset.id} 
                         className="cursor-pointer hover:bg-muted/50"
@@ -1684,11 +1635,8 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                         </TableCell>
                         <TableCell className="hidden lg:table-cell">{getRiskBadge(asset.risk)}</TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={(e) => {
-                            e.stopPropagation();
-                            // Open context menu
-                          }}>
-                            <MoreHorizontal className="w-4 h-4" />
+                          <Button variant="ghost" size="icon" title="Delete asset" onClick={(e) => handleDeleteAsset(asset.id, e)}>
+                            <Trash2 className="w-4 h-4 text-destructive" />
                           </Button>
                         </TableCell>
                       </TableRow>
