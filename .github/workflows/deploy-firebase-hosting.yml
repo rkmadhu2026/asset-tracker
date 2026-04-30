@@ -1,0 +1,40 @@
+# Manual deploy to Firebase Hosting (same project as .firebaserc).
+#
+# Required repo secrets:
+#   FIREBASE_SERVICE_ACCOUNT — JSON string for a Firebase CI service account
+#     (Project settings → Service accounts → Generate new private key).
+# Optional:
+#   GEMINI_API_KEY — baked into the Vite client bundle at build time.
+#
+# Run: Actions → "Deploy Firebase Hosting" → Run workflow.
+
+name: Deploy Firebase Hosting
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: npm run build
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: project-00e7fcf4-f07e-4410-b23
+          channelId: live
