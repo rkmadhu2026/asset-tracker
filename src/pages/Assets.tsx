@@ -1438,28 +1438,28 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
               <div className="p-2 bg-blue-100 rounded-lg"><Server className="w-5 h-5 text-blue-600" /></div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Servers</p>
-                <p className="text-xl font-bold">482</p>
+                <p className="text-xl font-bold">{assetsData.filter(a => a.type === 'Server' || a.type === 'VM').length}</p>
               </div>
             </Card>
             <Card className="p-4 flex items-center space-x-4">
               <div className="p-2 bg-green-100 rounded-lg"><Network className="w-5 h-5 text-green-600" /></div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Network</p>
-                <p className="text-xl font-bold">156</p>
+                <p className="text-xl font-bold">{assetsData.filter(a => a.type === 'Network' || a.type === 'Firewall' || a.type === 'Switch').length}</p>
               </div>
             </Card>
             <Card className="p-4 flex items-center space-x-4">
               <div className="p-2 bg-purple-100 rounded-lg"><Database className="w-5 h-5 text-purple-600" /></div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Storage</p>
-                <p className="text-xl font-bold">24</p>
+                <p className="text-xl font-bold">{assetsData.filter(a => a.type === 'Storage').length}</p>
               </div>
             </Card>
             <Card className="p-4 flex items-center space-x-4">
               <div className="p-2 bg-yellow-100 rounded-lg"><Zap className="w-5 h-5 text-yellow-600" /></div>
               <div>
-                <p className="text-xs text-muted-foreground font-medium">Power/UPS</p>
-                <p className="text-xl font-bold">12</p>
+                <p className="text-xs text-muted-foreground font-medium">Total Assets</p>
+                <p className="text-xl font-bold">{assetsData.length}</p>
               </div>
             </Card>
           </div>
