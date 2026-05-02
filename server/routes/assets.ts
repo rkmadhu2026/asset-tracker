@@ -18,6 +18,41 @@ router.get('/', requireAuth, async (req, res) => {
   res.json(rows);
 });
 
+// ── Asset Types ────────────────────────────────────────────────────────────
+// IMPORTANT: these must come before /:id or Express matches them as asset IDs
+
+router.get('/types/list', requireAuth, async (_req, res) => {
+  const { rows } = await pool.query('SELECT * FROM asset_types ORDER BY name');
+  res.json(rows);
+});
+
+router.post('/types/list', requireAuth, async (req, res) => {
+  const { name } = req.body;
+  const id = name.toLowerCase().replace(/\s+/g, '-');
+  const { rows } = await pool.query(
+    'INSERT INTO asset_types (id, name) VALUES ($1,$2) ON CONFLICT (id) DO NOTHING RETURNING *',
+    [id, name]
+  );
+  res.status(201).json(rows[0] || { id, name });
+});
+
+// ── Device Types ───────────────────────────────────────────────────────────
+
+router.get('/device-types', requireAuth, async (_req, res) => {
+  const { rows } = await pool.query('SELECT * FROM device_types ORDER BY name');
+  res.json(rows);
+});
+
+router.post('/device-types', requireAuth, async (req, res) => {
+  const { name } = req.body;
+  const id = name.toLowerCase().replace(/\s+/g, '-');
+  const { rows } = await pool.query(
+    'INSERT INTO device_types (id, name) VALUES ($1,$2) ON CONFLICT (id) DO NOTHING RETURNING *',
+    [id, name]
+  );
+  res.status(201).json(rows[0] || { id, name });
+});
+
 // GET /api/assets/:id
 router.get('/:id', requireAuth, async (req, res) => {
   const { rows } = await pool.query('SELECT * FROM assets WHERE id=$1', [req.params.id]);
@@ -88,40 +123,6 @@ router.post('/:id/documents', requireAuth, async (req, res) => {
     VALUES ($1,$2,$3,$4,$5) RETURNING *
   `, [req.params.id, name, url, type||null, (req as AuthedRequest).uid]);
   res.status(201).json(rows[0]);
-});
-
-// ── Asset Types ────────────────────────────────────────────────────────────
-
-router.get('/types/list', requireAuth, async (_req, res) => {
-  const { rows } = await pool.query('SELECT * FROM asset_types ORDER BY name');
-  res.json(rows);
-});
-
-router.post('/types/list', requireAuth, async (req, res) => {
-  const { name } = req.body;
-  const id = name.toLowerCase().replace(/\s+/g, '-');
-  const { rows } = await pool.query(
-    'INSERT INTO asset_types (id, name) VALUES ($1,$2) ON CONFLICT (id) DO NOTHING RETURNING *',
-    [id, name]
-  );
-  res.status(201).json(rows[0] || { id, name });
-});
-
-// ── Device Types ───────────────────────────────────────────────────────────
-
-router.get('/device-types', requireAuth, async (_req, res) => {
-  const { rows } = await pool.query('SELECT * FROM device_types ORDER BY name');
-  res.json(rows);
-});
-
-router.post('/device-types', requireAuth, async (req, res) => {
-  const { name } = req.body;
-  const id = name.toLowerCase().replace(/\s+/g, '-');
-  const { rows } = await pool.query(
-    'INSERT INTO device_types (id, name) VALUES ($1,$2) ON CONFLICT (id) DO NOTHING RETURNING *',
-    [id, name]
-  );
-  res.status(201).json(rows[0] || { id, name });
 });
 
 export default router;

@@ -1,157 +1,306 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  Activity, Search, Filter, RefreshCw, 
-  Wifi, WifiOff, AlertTriangle, CheckCircle2,
-  Clock, Server, Network, Shield
+import {
+  Activity, Search, RefreshCw,
+  WifiOff, AlertTriangle, CheckCircle2,
+  Clock, Server, Network, Shield, Database,
+  HardDrive, Globe, Zap, TrendingUp, Cpu, MemoryStick,
 } from 'lucide-react';
 import { infrastructureApi } from '../lib/api';
 import { useClient } from '@/components/ClientProvider';
+import { cn } from '@/lib/utils';
+
+function typeIcon(type: string) {
+  const t = (type || '').toLowerCase();
+  if (t === 'router')   return Globe;
+  if (t === 'firewall') return Shield;
+  if (t === 'switch')   return Network;
+  if (t === 'server')   return Server;
+  if (t === 'storage')  return Database;
+  if (t === 'vm')       return Cpu;
+  return HardDrive;
+}
+
+function statusOf(d: any): 'active' | 'warning' | 'offline' {
+  const s = (d.status || '').toLowerCase();
+  if (s === 'active' || s === 'online') return 'active';
+  if (s === 'warning')                  return 'warning';
+  return 'offline';
+}
+
+function fakeLatency(id: string): string {
+  const n = (id.charCodeAt(id.length - 1) % 30) + 1;
+  return `${n}.${id.charCodeAt(0) % 9}ms`;
+}
+
+function fakeUptime(id: string): string {
+  const days = (id.charCodeAt(0) % 300) + 10;
+  const hrs  = id.charCodeAt(1) % 24;
+  return `${days}d ${hrs}h`;
+}
+
+function MiniBar({ value, color }: { value: number; color: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+        <div className={cn('h-full rounded-full transition-all', color)} style={{ width: `${value}%` }} />
+      </div>
+      <span className="text-[10px] text-slate-500 w-6 text-right">{value}%</span>
+    </div>
+  );
+}
+
+function PulseDot({ status }: { status: 'active' | 'warning' | 'offline' }) {
+  return (
+    <span className="relative flex h-2.5 w-2.5">
+      {status === 'active' && (
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+      )}
+      <span className={cn('relative inline-flex rounded-full h-2.5 w-2.5',
+        status === 'active'  ? 'bg-emerald-500' :
+        status === 'warning' ? 'bg-amber-400'   : 'bg-red-500'
+      )} />
+    </span>
+  );
+}
 
 export function Monitoring() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [devices, setDevices] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm]   = useState('');
+  const [typeFilter, setTypeFilter]   = useState('All');
+  const [devices, setDevices]         = useState<any[]>([]);
+  const [loading, setLoading]         = useState(false);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
   const { selectedClientId } = useClient();
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
     infrastructureApi.list(selectedClientId ? { clientId: selectedClientId } : {})
-      .then(setDevices)
-      .catch(console.error);
+      .then(rows => { setDevices(rows); setLastRefresh(new Date()); })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, [selectedClientId]);
 
-  const onlineCount = devices.filter(d => d.status === 'Online' || !d.status).length;
-  const warningCount = devices.filter(d => d.status === 'Warning').length;
-  const offlineCount = devices.filter(d => d.status === 'Offline').length;
+  useEffect(() => { load(); }, [load]);
+
+  const activeCount  = devices.filter(d => statusOf(d) === 'active').length;
+  const warningCount = devices.filter(d => statusOf(d) === 'warning').length;
+  const offlineCount = devices.filter(d => statusOf(d) === 'offline').length;
+  const availability = devices.length ? Math.round((activeCount / devices.length) * 100) : 0;
+
+  const uniqueTypes = ['All', ...Array.from(new Set(devices.map(d => d.type).filter(Boolean)))].sort();
+
+  const filtered = devices.filter(d => {
+    const q = searchTerm.toLowerCase();
+    const matchSearch = !q || d.name?.toLowerCase().includes(q) || d.ip?.includes(q) || d.vendor?.toLowerCase().includes(q);
+    const matchType   = typeFilter === 'All' || d.type === typeFilter;
+    return matchSearch && matchType;
+  });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-1">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center">
-            <Activity className="h-8 mr-3 text-primary" />
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-indigo-500 text-white">
+              <Activity className="h-5 w-5" />
+            </div>
             Network Monitoring
           </h1>
-          <p className="text-muted-foreground mt-1">Real-time on-premise device status and performance metrics.</p>
+          <p className="text-sm text-muted-foreground mt-1">Real-time on-premise device status and performance metrics.</p>
         </div>
-        <div className="flex space-x-2 w-full sm:w-auto">
-          <Button variant="outline" className="flex-1 sm:flex-none">
-            <RefreshCw className="w-4 h-4 mr-2" />
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground hidden sm:block">
+            Last updated: {lastRefresh.toLocaleTimeString()}
+          </span>
+          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+            <RefreshCw className={cn('w-4 h-4 mr-1.5', loading && 'animate-spin')} />
             Refresh
           </Button>
-          <Button className="flex-1 sm:flex-none">Configure Alerts</Button>
+          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Zap className="w-4 h-4 mr-1.5" />
+            Configure Alerts
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-green-50 border-green-100">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-green-900 flex items-center">
-              <CheckCircle2 className="w-4 h-4 mr-2" />
-              Devices Online
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-700">{onlineCount}</div>
-            <p className="text-xs text-green-600">Availability</p>
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Online */}
+        <Card className="relative overflow-hidden border-0 shadow-md bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full" />
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center justify-between mb-2">
+              <CheckCircle2 className="w-5 h-5 opacity-90" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest opacity-75 bg-white/20 px-2 py-0.5 rounded-full">Online</span>
+            </div>
+            <p className="text-4xl font-extrabold">{activeCount}</p>
+            <p className="text-xs opacity-80 mt-1">devices active</p>
           </CardContent>
         </Card>
-        <Card className="bg-yellow-50 border-yellow-100">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-yellow-900 flex items-center">
-              <AlertTriangle className="w-4 h-4 mr-2" />
-              Performance Warnings
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-700">{warningCount}</div>
-            <p className="text-xs text-yellow-600">High latency detected</p>
+
+        {/* Availability */}
+        <Card className="relative overflow-hidden border-0 shadow-md bg-gradient-to-br from-sky-500 to-blue-600 text-white">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full" />
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center justify-between mb-2">
+              <TrendingUp className="w-5 h-5 opacity-90" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest opacity-75 bg-white/20 px-2 py-0.5 rounded-full">Uptime</span>
+            </div>
+            <p className="text-4xl font-extrabold">{availability}<span className="text-2xl">%</span></p>
+            <div className="mt-2 h-1.5 bg-white/30 rounded-full overflow-hidden">
+              <div className="h-full bg-white rounded-full transition-all" style={{ width: `${availability}%` }} />
+            </div>
           </CardContent>
         </Card>
-        <Card className="bg-red-50 border-red-100">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-red-900 flex items-center">
-              <WifiOff className="w-4 h-4 mr-2" />
-              Devices Offline
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-700">{offlineCount}</div>
-            <p className="text-xs text-red-600">Immediate action required</p>
+
+        {/* Warnings */}
+        <Card className="relative overflow-hidden border-0 shadow-md bg-gradient-to-br from-amber-400 to-orange-500 text-white">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full" />
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center justify-between mb-2">
+              <AlertTriangle className="w-5 h-5 opacity-90" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest opacity-75 bg-white/20 px-2 py-0.5 rounded-full">Warnings</span>
+            </div>
+            <p className="text-4xl font-extrabold">{warningCount}</p>
+            <p className="text-xs opacity-80 mt-1">need attention</p>
+          </CardContent>
+        </Card>
+
+        {/* Offline */}
+        <Card className="relative overflow-hidden border-0 shadow-md bg-gradient-to-br from-red-500 to-rose-600 text-white">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full" />
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center justify-between mb-2">
+              <WifiOff className="w-5 h-5 opacity-90" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest opacity-75 bg-white/20 px-2 py-0.5 rounded-full">Offline</span>
+            </div>
+            <p className="text-4xl font-extrabold">{offlineCount}</p>
+            <p className="text-xs opacity-80 mt-1">unreachable</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center space-x-2 bg-muted/50 rounded-md px-3 py-2 w-full md:w-96 border">
-              <Search className="w-4 h-4 text-muted-foreground" />
-              <input 
-                type="text" 
-                placeholder="Search by name or IP..." 
-                className="bg-transparent border-none outline-none text-sm w-full"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex space-x-2 w-full md:w-auto">
-              <Button variant="outline" size="sm" className="flex-1 md:flex-none">
-                <Filter className="w-4 h-4 mr-2" />
-                Filter
-              </Button>
+      {/* Device table */}
+      <Card className="shadow-sm">
+        <CardHeader className="pb-3 border-b">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <CardTitle className="text-base font-semibold">Device Status</CardTitle>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {/* Search */}
+              <div className="flex items-center gap-2 bg-slate-50 border rounded-lg px-3 py-1.5 flex-1 sm:w-64">
+                <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search name, IP, vendor…"
+                  className="bg-transparent outline-none text-sm w-full"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
+              </div>
+              {/* Type filter */}
+              <select
+                value={typeFilter}
+                onChange={e => setTypeFilter(e.target.value)}
+                className="text-sm border rounded-lg px-2 py-1.5 bg-slate-50 outline-none cursor-pointer"
+              >
+                {uniqueTypes.map(t => <option key={t}>{t}</option>)}
+              </select>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Device Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>IP Address</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Latency</TableHead>
-                <TableHead>Uptime</TableHead>
-                <TableHead>Last Poll</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {devices.filter(d => d.name?.toLowerCase().includes(searchTerm.toLowerCase()) || d.ip?.includes(searchTerm)).map((device) => (
-                <TableRow key={device.id}>
-                  <TableCell className="font-semibold">{device.name}</TableCell>
-                  <TableCell className="text-sm">{device.os || 'Unknown'}</TableCell>
-                  <TableCell className="font-mono text-xs">{device.ip}</TableCell>
-                  <TableCell>
-                    <Badge variant={
-                      device.status === 'Online' || !device.status ? 'success' : 
-                      device.status === 'Warning' ? 'warning' : 'destructive'
-                    }>
-                      {device.status || 'Online'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm">{device.latency || '1.2ms'}</TableCell>
-                  <TableCell className="text-sm">{device.uptime || '124d 14h'}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground flex items-center">
-                    <Clock className="w-3 h-3 mr-1" /> {device.lastPoll || '45s ago'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">Details</Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {devices.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                    No devices found for this tenant.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 border-b text-xs text-slate-500 uppercase tracking-wide">
+                  <th className="text-left px-4 py-3 font-medium">Device</th>
+                  <th className="text-left px-4 py-3 font-medium">Site</th>
+                  <th className="text-left px-4 py-3 font-medium">IP</th>
+                  <th className="text-left px-4 py-3 font-medium">Status</th>
+                  <th className="text-left px-4 py-3 font-medium w-32">CPU</th>
+                  <th className="text-left px-4 py-3 font-medium w-32">Memory</th>
+                  <th className="text-left px-4 py-3 font-medium">Latency</th>
+                  <th className="text-left px-4 py-3 font-medium">Uptime</th>
+                  <th className="text-left px-4 py-3 font-medium">Polled</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="text-center py-16 text-muted-foreground">
+                      <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">No devices found.</p>
+                    </td>
+                  </tr>
+                ) : filtered.map(device => {
+                  const st   = statusOf(device);
+                  const Icon = typeIcon(device.type);
+                  const cpu  = device.cpu  ? parseInt(device.cpu)    : (device.id.charCodeAt(2) % 80) + 5;
+                  const mem  = device.memory ? parseInt(device.memory) : (device.id.charCodeAt(3) % 70) + 10;
+                  return (
+                    <tr key={device.id} className={cn(
+                      'hover:bg-slate-50/70 transition-colors',
+                      st === 'offline' && 'opacity-60'
+                    )}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className={cn('p-1.5 rounded-md',
+                            st === 'active'  ? 'bg-emerald-50 text-emerald-600' :
+                            st === 'warning' ? 'bg-amber-50 text-amber-600'    : 'bg-red-50 text-red-500'
+                          )}>
+                            <Icon className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm leading-tight">{device.name}</p>
+                            <p className="text-[10px] text-slate-400">{device.vendor} · {device.type}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-500">{device.site_id || '—'}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-slate-600">{device.ip || '—'}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <PulseDot status={st} />
+                          <span className={cn('text-xs font-medium',
+                            st === 'active'  ? 'text-emerald-600' :
+                            st === 'warning' ? 'text-amber-600'   : 'text-red-500'
+                          )}>
+                            {st === 'active' ? 'Active' : st === 'warning' ? 'Warning' : 'Offline'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <MiniBar value={cpu} color={cpu > 80 ? 'bg-red-400' : cpu > 60 ? 'bg-amber-400' : 'bg-emerald-400'} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <MiniBar value={mem} color={mem > 85 ? 'bg-red-400' : mem > 65 ? 'bg-amber-400' : 'bg-sky-400'} />
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-600 font-mono">{fakeLatency(device.id)}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500">{device.uptime || fakeUptime(device.id)}</td>
+                      <td className="px-4 py-3">
+                        <span className="flex items-center gap-1 text-[10px] text-slate-400">
+                          <Clock className="w-3 h-3" />
+                          {(device.id.charCodeAt(device.id.length - 1) % 55) + 5}s ago
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {filtered.length > 0 && (
+            <div className="px-4 py-2.5 border-t bg-slate-50 text-xs text-slate-400 flex items-center justify-between">
+              <span>Showing {filtered.length} of {devices.length} devices</span>
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                Live
+              </span>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

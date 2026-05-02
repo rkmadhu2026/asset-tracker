@@ -5,6 +5,8 @@ services:
       POSTGRES_USER: argus
       POSTGRES_PASSWORD: ${PG_PASSWORD:-changeme}
       POSTGRES_DB: argus
+    ports:
+      - "${PG_HOST_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./server/migrations/001_initial.sql:/docker-entrypoint-initdb.d/01-initial.sql:ro
@@ -28,6 +30,8 @@ services:
       PG_PASSWORD: ${PG_PASSWORD:-changeme}
       API_PORT: "4000"
       CORS_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8080}
+      # Local-dev only: skip Firebase token verification, treat all callers as admin.
+      AUTH_BYPASS: ${AUTH_BYPASS:-true}
     depends_on:
       db:
         condition: service_healthy
@@ -38,6 +42,7 @@ services:
       dockerfile: docker/Dockerfile.web
       args:
         GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+        AUTH_BYPASS: ${AUTH_BYPASS:-true}
     ports:
       - "${HTTP_PORT:-8080}:80"
     depends_on:

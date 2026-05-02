@@ -1009,17 +1009,7 @@ export function Infrastructure() {
 
   useEffect(() => {
     infrastructureApi.list(selectedClientId ? { clientId: selectedClientId } : {})
-      .then(rows => {
-        if (rows.length === 0 && selectedClientId) {
-          Promise.all(
-            initialInfrastructureDevices.map((d) =>
-              infrastructureApi.create(d as Omit<Device, 'id'> & { id: string })
-            )
-          ).then(() => infrastructureApi.list({ clientId: selectedClientId })).then(setDevices).catch(console.error);
-        } else {
-          setDevices(rows);
-        }
-      })
+      .then(setDevices)
       .catch(console.error);
   }, [selectedClientId]);
 
@@ -1427,7 +1417,7 @@ export function Infrastructure() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground font-medium">Network Switches</p>
-              <p className="text-2xl font-bold">248</p>
+              <p className="text-2xl font-bold">{devices.filter(d => d.type === 'Switch' || d.type === 'Router').length}</p>
               <p className="text-[10px] text-muted-foreground">Cisco, Aruba, Arista, Huawei</p>
             </div>
             <Network className="w-8 h-8 text-blue-100" />
@@ -1437,7 +1427,7 @@ export function Infrastructure() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground font-medium">Enterprise Servers</p>
-              <p className="text-2xl font-bold">86</p>
+              <p className="text-2xl font-bold">{devices.filter(d => d.type === 'Server' || d.type === 'VM').length}</p>
               <p className="text-[10px] text-muted-foreground">HP ProLiant, Dell PowerEdge</p>
             </div>
             <Server className="w-8 h-8 text-green-100" />
@@ -1447,7 +1437,7 @@ export function Infrastructure() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground font-medium">Security & Firewalls</p>
-              <p className="text-2xl font-bold">32</p>
+              <p className="text-2xl font-bold">{devices.filter(d => d.type === 'Firewall').length}</p>
               <p className="text-[10px] text-muted-foreground">Fortinet, Cisco, Palo Alto</p>
             </div>
             <Shield className="w-8 h-8 text-red-100" />
@@ -1456,8 +1446,8 @@ export function Infrastructure() {
         <Card className="p-4 border-l-4 border-l-purple-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted-foreground font-medium">Components & Parts</p>
-              <p className="text-2xl font-bold">1,420</p>
+              <p className="text-xs text-muted-foreground font-medium">Storage & Other</p>
+              <p className="text-2xl font-bold">{devices.filter(d => d.type === 'Storage' || d.type === 'Power' || d.type === 'Device').length}</p>
               <p className="text-[10px] text-muted-foreground">PSUs, Fans, SFPs, Memory</p>
             </div>
             <Cpu className="w-8 h-8 text-purple-100" />
