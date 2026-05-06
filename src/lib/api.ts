@@ -1,11 +1,8 @@
-import { auth } from '../firebase';
 import type { Client, Site, Rack } from '../types/inventory';
 
-async function token(): Promise<string> {
+function getToken(): string {
   if (process.env.AUTH_BYPASS === 'true') return 'bypass';
-  const user = auth.currentUser;
-  if (!user) throw new Error('Not authenticated');
-  return user.getIdToken();
+  return localStorage.getItem('jwt') || '';
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -13,7 +10,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     method,
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${await token()}`,
+      Authorization: `Bearer ${getToken()}`,
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
@@ -291,4 +288,33 @@ export const usersApi = {
   sync:       (data: { display_name?: string; photo_url?: string }) => post<UserRow>('/users/sync', data),
   list:       ()                                 => get<UserRow[]>('/users'),
   updateRole: (uid: string, role: string)        => put<UserRow>(`/users/${uid}/role`, { role }),
+};
+
+// ── Audit Logs ─────────────────────────────────────────────────────────────
+
+export interface AuditLogRow {
+  id: number;
+  action: string;
+  type: string;
+  severity: string;
+  resource_type?: string;
+  resource_id?: string;
+  details?: { message?: string } | null;
+  created_at: string;
+  user_email: string;
+}
+
+export const auditLogsApi = {
+  list: (params?: { search?: string; type?: string; severity?: string; limit?: number; offset?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.search)   q.set('search',   params.search);
+    if (params?.type)     q.set('type',     params.type);
+    if (params?.severity) q.set('severity', params.severity);
+    if (params?.limit)    q.set('limit',    String(params.limit));
+    if (params?.offset)   q.set('offset',   String(params.offset));
+    const qs = q.toString();
+    return get<AuditLogRow[]>(qs ? `/audit-logs?${qs}` : '/audit-logs');
+  },
+  write: (event: { action: string; type?: string; severity?: string; resource_type?: string; resource_id?: string; details?: string }) =>
+    post<{ ok: boolean }>('/audit-logs', event),
 };

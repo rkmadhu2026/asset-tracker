@@ -196,11 +196,22 @@ async function importAssets(client) {
     const site = sites.find((s) => s.id === siteId);
     const primaryClientId = site?.client_ids?.[0] ?? null;
     const rows = readSheet(filePath);
-    let inserted = 0;
+    let imported = 0;
+    const seenIds = new Map();
     for (const r of rows) {
       const textname = String(r.textname || '').trim();
       if (!textname) continue; // skip blank rows
       const id = `${siteId}-${slug(textname)}`;
+      const duplicateInfo = seenIds.get(id);
+      if (duplicateInfo) {
+        console.warn(`  [skip dup] ${id} in ${file} (ip=${String(r.ipaddress || '').trim() || 'n/a'})`);
+        continue;
+      }
+      seenIds.set(id, {
+        file,
+        textname,
+        ip: String(r.ipaddress || '').trim() || null,
+      });
       const cls = classify(r.pathhost, r.selecthost);
       const tags = [];
       if (r.servertype) tags.push(`env:${r.servertype}`);
@@ -248,9 +259,9 @@ async function importAssets(client) {
            String(r.emailid || '').trim() || null]
         );
       }
-      inserted++;
+      imported++;
     }
-    summary.push({ file, siteId, count: inserted });
+    summary.push({ file, siteId, count: imported });
   }
   return summary;
 }
@@ -281,7 +292,8 @@ async function importAssets(client) {
     console.log('\nassets per site:');
     let total = 0;
     for (const row of summary) {
-      console.log(`  ${row.file.padEnd(34)}  ${row.siteId.padEnd(22)}  ${String(row.count).padStart(4)}${row.note ? '  ('+row.note+')' : ''}`);
+      const suffix = row.note ? `  (${row.note})` : '';
+      console.log(`  ${row.file.padEnd(34)}  ${row.siteId.padEnd(22)}  ${String(row.count).padStart(4)}${suffix}`);
       total += row.count;
     }
     console.log(`  ${'TOTAL'.padEnd(34)}  ${''.padEnd(22)}  ${String(total).padStart(4)}`);

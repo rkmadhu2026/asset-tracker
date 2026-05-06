@@ -26,7 +26,6 @@ import {
 import { DeviceTemplates } from '@/components/DeviceTemplates';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { storage, ref, uploadBytes, getDownloadURL } from '../firebase';
 import { infrastructureApi, type Device } from '../lib/api';
 import ReactFlow, { Background, Controls, MiniMap, MarkerType, Handle, Position } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -2617,9 +2616,15 @@ export function Infrastructure() {
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file && selectedDeviceId) {
-                            const storageRef = ref(storage, `documents/${selectedDeviceId}/${file.name}`);
-                            await uploadBytes(storageRef, file);
-                            const url = await getDownloadURL(storageRef);
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            const res = await fetch('/api/upload', {
+                              method: 'POST',
+                              headers: { Authorization: `Bearer ${localStorage.getItem('jwt') || ''}` },
+                              body: formData,
+                            });
+                            if (!res.ok) throw new Error('Upload failed');
+                            const { url } = await res.json();
                             await infrastructureApi.addDocument(selectedDeviceId, { name: file.name, url, type: file.type });
                             infrastructureApi.listDocuments(selectedDeviceId).then(setDocuments).catch(console.error);
                           }

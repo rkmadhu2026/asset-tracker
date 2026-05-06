@@ -197,19 +197,33 @@ const nodeTypes = { device: DeviceNode };
 
 // ── Inner component ───────────────────────────────────────────────────────────
 
+const NODE_LIMIT = 80;
+
 function TopologyInner() {
   const { fitView } = useReactFlow();
   const { selectedClientId } = useClient();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(false);
+  const [truncated, setTruncated] = useState(false);
   const [stats, setStats] = useState({ nodes: 0, physical: 0, logical: 0 });
   const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async (clientId: string | null) => {
+    // Require a client selection — "All Clients" would render 350+ nodes
+    if (!clientId) {
+      setNodes([]);
+      setEdges([]);
+      setStats({ nodes: 0, physical: 0, logical: 0 });
+      setTruncated(false);
+      return;
+    }
     setLoading(true);
     try {
-      const devices = await infrastructureApi.list(clientId ? { clientId } : {});
+      let devices = await infrastructureApi.list({ clientId });
+      const wasTruncated = devices.length > NODE_LIMIT;
+      if (wasTruncated) devices = devices.slice(0, NODE_LIMIT);
+      setTruncated(wasTruncated);
       const newNodes = layoutNodes(devices);
       const newEdges = buildEdges(devices);
       setNodes(newNodes);
@@ -219,7 +233,7 @@ function TopologyInner() {
         physical: newEdges.filter(e => (e.data as any)?.linkType === 'physical').length,
         logical:  newEdges.filter(e => (e.data as any)?.linkType === 'logical').length,
       });
-      setLoaded(l => !l); // toggle to trigger fitView via effect
+      setLoaded(l => !l);
     } catch (e) {
       console.error('Topology load failed:', e);
     } finally {
@@ -227,9 +241,9 @@ function TopologyInner() {
     }
   }, [setNodes, setEdges]);
 
-  // fitView after nodes/edges settle
+  // fitView after nodes settle — only runs when loaded toggles (after data arrives)
   useEffect(() => {
-    if (nodes.length > 0) setTimeout(() => fitView({ padding: 0.15, duration: 400 }), 50);
+    if (nodes.length > 0) setTimeout(() => fitView({ padding: 0.15, duration: 400 }), 80);
   }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load(selectedClientId); }, [selectedClientId, load]);
@@ -239,59 +253,84 @@ function TopologyInner() {
     [setEdges],
   );
 
+  const noClient = !selectedClientId;
+
   return (
     <div className="h-[calc(100vh-10rem)] flex flex-col gap-3">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Network Topology</h1>
+          <h1 className="text-xl font-bold tracking-tight">Network Topology</h1>
           <p className="text-sm text-muted-foreground">Physical links (solid) and logical paths (dashed) between devices.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {loading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-          <Badge variant="outline">{stats.nodes} nodes</Badge>
-          <Badge variant="outline" className="text-slate-600 border-slate-400">{stats.physical} physical</Badge>
-          <Badge variant="outline" className="text-indigo-600 border-indigo-300">{stats.logical} logical</Badge>
-          <Button variant="outline" size="sm" onClick={() => load(selectedClientId)} disabled={loading}>
+          {!noClient && (
+            <>
+              <Badge variant="outline">{stats.nodes} nodes</Badge>
+              <Badge variant="outline" className="text-slate-600 border-slate-400">{stats.physical} physical</Badge>
+              <Badge variant="outline" className="text-indigo-600 border-indigo-300">{stats.logical} logical</Badge>
+            </>
+          )}
+          <Button variant="outline" size="sm" onClick={() => load(selectedClientId)} disabled={loading || noClient}>
             <RefreshCw className="w-4 h-4 mr-1" />Refresh
           </Button>
-          <Button variant="outline" size="sm" onClick={() => fitView({ padding: 0.12, duration: 400 })}>
+          <Button variant="outline" size="sm" onClick={() => fitView({ padding: 0.12, duration: 400 })} disabled={noClient || stats.nodes === 0}>
             <ZoomIn className="w-4 h-4 mr-1" />Fit
           </Button>
         </div>
       </div>
 
+      {/* Truncation warning */}
+      {truncated && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <Network className="h-3.5 w-3.5 shrink-0" />
+          Showing first {NODE_LIMIT} devices — select a more specific client to see all nodes.
+        </div>
+      )}
+
       <Card className="flex-1 overflow-hidden border relative">
         {/* Legend */}
-        <div className="absolute top-3 left-3 z-10 bg-white/95 border rounded-lg p-3 shadow-sm text-[11px] space-y-1.5 min-w-[150px]">
+        <div className="absolute top-3 left-3 z-10 bg-white/95 border rounded-lg p-3 shadow-sm text-[11px] space-y-1.5 min-w-[140px]">
           <p className="font-semibold text-xs border-b pb-1">Legend</p>
-          <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-green-500"/><span>Active</span></div>
+          <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"/><span>Active</span></div>
           <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-yellow-500"/><span>Warning</span></div>
-          <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-500"/><span>Offline / Critical</span></div>
+          <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-500"/><span>Offline</span></div>
           <div className="border-t pt-1.5 space-y-1.5">
             <div className="flex items-center gap-2">
               <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#64748b" strokeWidth="2"/></svg>
-              <span>Physical Link</span>
+              <span>Physical</span>
             </div>
             <div className="flex items-center gap-2">
               <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#6366f1" strokeWidth="2" strokeDasharray="5 3"/></svg>
-              <span>Logical Path</span>
+              <span>Logical</span>
             </div>
           </div>
         </div>
 
+        {/* No client selected */}
+        {noClient && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-20 text-muted-foreground gap-3">
+            <Network className="w-10 h-10 opacity-30" />
+            <div className="text-center">
+              <p className="text-sm font-medium text-foreground">Select a client to view topology</p>
+              <p className="text-xs mt-1">Use the Client Context selector in the sidebar.</p>
+            </div>
+          </div>
+        )}
+
         {/* Loading overlay */}
-        {loading && nodes.length === 0 && (
+        {loading && (
           <div className="absolute inset-0 flex items-center justify-center z-20 bg-background/60">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           </div>
         )}
 
-        {/* Empty state */}
-        {!loading && stats.nodes === 0 && (
+        {/* Empty state — client selected but no devices */}
+        {!loading && !noClient && stats.nodes === 0 && (
           <div className="absolute inset-0 flex flex-col items-center justify-center z-20 text-muted-foreground">
             <Network className="w-10 h-10 mb-3 opacity-40" />
-            <p className="text-sm font-medium">No infrastructure devices found</p>
+            <p className="text-sm font-medium">No infrastructure devices found for this client</p>
             <p className="text-xs mt-1">Add devices on the Infrastructure page first.</p>
           </div>
         )}
@@ -303,9 +342,7 @@ function TopologyInner() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.12 }}
-          minZoom={0.1}
+          minZoom={0.05}
           maxZoom={2.5}
           className="bg-slate-50/40"
         >

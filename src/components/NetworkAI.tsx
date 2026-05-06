@@ -16,7 +16,6 @@ import {
   generateMusic, textToSpeech, complexReasoning 
 } from '@/services/gemini';
 import { cn } from '@/lib/utils';
-import { db, collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot, where } from '../firebase';
 import { useAuth } from './AuthProvider';
 
 interface Message {
@@ -27,8 +26,6 @@ interface Message {
   metadata?: any;
   timestamp?: any;
 }
-
-import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
 export function NetworkAI() {
   const [isOpen, setIsOpen] = useState(false);
@@ -50,32 +47,26 @@ export function NetworkAI() {
 
   useEffect(() => {
     if (!user) return;
-
-    const q = query(
-      collection(db, 'chats', user.uid, 'messages'),
-      orderBy('timestamp', 'asc'),
-      limit(50)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Message[];
-      setMessages(msgs);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, `chats/${user.uid}/messages`);
-    });
-
-    return () => unsubscribe();
+    fetch('/api/chats/messages?limit=50', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('jwt') || ''}` }
+    })
+      .then(res => res.json())
+      .then((msgs: Message[]) => setMessages(msgs))
+      .catch(console.error);
   }, [user]);
 
   const saveMessage = async (message: Omit<Message, 'id'>) => {
     if (!user) return;
-    await addDoc(collection(db, 'chats', user.uid, 'messages'), {
-      ...message,
-      timestamp: serverTimestamp()
+    const res = await fetch('/api/chats/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('jwt') || ''}`
+      },
+      body: JSON.stringify(message),
     });
+    const saved = await res.json();
+    setMessages(prev => [...prev, saved]);
   };
 
   const handleSend = async () => {

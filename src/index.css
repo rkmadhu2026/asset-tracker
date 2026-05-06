@@ -1,44 +1,107 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: hsl(38 32% 97%);
-  --color-foreground: hsl(24 10% 18%);
-  --color-card: hsl(40 40% 99%);
-  --color-card-foreground: hsl(24 10% 18%);
-  --color-popover: hsl(40 40% 99%);
-  --color-popover-foreground: hsl(24 10% 18%);
-  --color-primary: hsl(14 48% 54%);
-  --color-primary-foreground: hsl(40 35% 98%);
-  --color-secondary: hsl(35 28% 94%);
-  --color-secondary-foreground: hsl(24 10% 18%);
-  --color-muted: hsl(35 22% 93%);
-  --color-muted-foreground: hsl(24 8% 42%);
-  --color-accent: hsl(32 30% 93%);
-  --color-accent-foreground: hsl(24 10% 18%);
-  --color-destructive: hsl(0 72% 48%);
-  --color-destructive-foreground: hsl(40 35% 98%);
-  --color-border: hsl(32 18% 88%);
-  --color-input: hsl(32 18% 88%);
-  --color-ring: hsl(14 48% 54%);
-  --radius: 0.625rem;
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-    "Segoe UI Emoji", "Segoe UI Symbol";
-  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  /* ── Backgrounds ─────────────────────────────────────────────────────── */
+  --color-background:           #F7F3ED;             /* warm cream canvas         */
+  --color-surface:              #ffffff;              /* white panels              */
+  --color-card:                 #ffffff;
+  --color-card-foreground:      #19160F;
+  --color-popover:              #ffffff;
+  --color-popover-foreground:   #19160F;
+
+  /* ── Text ────────────────────────────────────────────────────────────── */
+  --color-foreground:           #19160F;             /* warm near-black           */
+  --color-muted-foreground:     #6B6458;             /* warm medium text          */
+
+  /* ── Primary — burnt orange ──────────────────────────────────────────── */
+  --color-primary:              #C8622E;             /* warm burnt orange         */
+  --color-primary-foreground:   #ffffff;
+
+  /* ── Secondary / muted / accent ──────────────────────────────────────── */
+  --color-secondary:            #FAE8DC;             /* light warm orange tint    */
+  --color-secondary-foreground: #3D3830;
+  --color-muted:                #F0EBE4;             /* warm light grey           */
+  --color-accent:               rgba(200, 98, 46, 0.08);
+  --color-accent-foreground:    #C8622E;
+
+  /* ── Status ──────────────────────────────────────────────────────────── */
+  --color-destructive:          hsl(0 84% 60%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+
+  /* ── Borders / inputs ────────────────────────────────────────────────── */
+  --color-border:               #E8E1D8;             /* warm parchment border     */
+  --color-input:                #F0EBE4;
+  --color-ring:                 #C8622E;
+
+  /* ── Radius & typography ─────────────────────────────────────────────── */
+  --radius: 0.75rem;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  --font-display: "Lora", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 }
 
 @layer base {
   html {
     color-scheme: light;
   }
+
   * {
     border-color: var(--color-border);
   }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings: "rlig" 1, "calt" 1, "cv11" 1;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Scrollbars — thin, subtle */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: #C8B8A8;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: #A09688; }
+
+  /* Selection */
+  ::selection {
+    background-color: rgba(200, 98, 46, 0.15);
+    color: #19160F;
+  }
+
+  :focus-visible {
+    outline: 2px solid rgba(200, 98, 46, 0.5);
+    outline-offset: 2px;
   }
 }
 
+/* ── Utilities ───────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Subtle dot grid for sidebar */
+  .bg-dot-grid {
+    background-image: radial-gradient(
+      circle,
+      rgba(160, 150, 136, 0.3) 1px,
+      transparent 1px
+    );
+    background-size: 20px 20px;
+  }
+
+  /* Glass card */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid #E8E1D8;
+  }
+
+  /* Primary glow */
+  .glow-primary {
+    box-shadow: 0 0 0 1px rgba(200, 98, 46, 0.12),
+                0 4px 24px -8px rgba(200, 98, 46, 0.15);
+  }
+}

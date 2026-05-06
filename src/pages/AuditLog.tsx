@@ -1,118 +1,250 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Search, Filter, Download, Clock, User, Settings, ShieldAlert, Activity } from 'lucide-react';
+import { Search, Filter, Download, Clock, User, Settings, Activity, X, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { auditLogsApi, type AuditLogRow } from '@/lib/api';
 
-const auditLogs = [
-  { id: 'LOG-001', timestamp: new Date('2026-04-01T22:30:00'), user: 'admin@acme.com', action: 'Configuration Backup', type: 'Config', severity: 'Info', details: 'Manual backup triggered for Core-Router-01' },
-  { id: 'LOG-002', timestamp: new Date('2026-04-01T22:15:00'), user: 'system', action: 'Vulnerability Scan', type: 'System', severity: 'Warning', details: 'Found 2 new vulnerabilities in Edge-FW-02' },
-  { id: 'LOG-003', timestamp: new Date('2026-04-01T21:45:00'), user: 'j.doe@acme.com', action: 'User Login', type: 'User', severity: 'Info', details: 'Successful login from 192.168.1.45' },
-  { id: 'LOG-004', timestamp: new Date('2026-04-01T21:30:00'), user: 'admin@acme.com', action: 'Firmware Upgrade', type: 'Config', severity: 'Critical', details: 'Upgraded Core-Router-01 to v17.4' },
-  { id: 'LOG-005', timestamp: new Date('2026-04-01T20:00:00'), user: 'system', action: 'Compliance Audit', type: 'System', severity: 'Info', details: 'Weekly CIS benchmark scan completed' },
-  { id: 'LOG-006', timestamp: new Date('2026-04-01T19:15:00'), user: 'm.smith@acme.com', action: 'Asset Deleted', type: 'User', severity: 'Warning', details: 'Deleted legacy-switch-05 from CMDB' },
-  { id: 'LOG-007', timestamp: new Date('2026-04-01T18:45:00'), user: 'system', action: 'Config Drift Detected', type: 'Config', severity: 'Warning', details: 'Drift detected on Access-Switch-L2' },
-];
+const TYPE_OPTIONS   = ['User', 'System', 'Config'];
+const SEV_OPTIONS    = ['Info', 'Warning', 'Critical'];
+
+function severityBadge(s: string) {
+  if (s === 'Critical') return <Badge variant="destructive">Critical</Badge>;
+  if (s === 'Warning')  return <Badge className="bg-amber-100 text-amber-800 border-amber-200">Warning</Badge>;
+  return <Badge variant="secondary">Info</Badge>;
+}
+
+function typeIcon(t: string) {
+  if (t === 'User')   return <User className="w-4 h-4 text-blue-500" />;
+  if (t === 'Config') return <Settings className="w-4 h-4 text-purple-500" />;
+  return <Activity className="w-4 h-4 text-green-500" />;
+}
+
+function detailsText(row: AuditLogRow): string {
+  if (!row.details) return '';
+  if (typeof row.details === 'object' && row.details.message) return row.details.message;
+  return JSON.stringify(row.details);
+}
+
+function toCSV(rows: AuditLogRow[]): string {
+  const header = ['Timestamp', 'User', 'Type', 'Severity', 'Action', 'Resource', 'Details'];
+  const lines = rows.map(r => [
+    format(new Date(r.created_at), 'yyyy-MM-dd HH:mm:ss'),
+    r.user_email,
+    r.type,
+    r.severity,
+    r.action,
+    r.resource_type ? `${r.resource_type}/${r.resource_id ?? ''}` : '',
+    detailsText(r).replace(/,/g, ';'),
+  ].join(','));
+  return [header.join(','), ...lines].join('\n');
+}
 
 export function AuditLog() {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [logs, setLogs]         = useState<AuditLogRow[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState<string | null>(null);
+  const [search, setSearch]     = useState('');
+  const [typeFilter, setType]   = useState('');
+  const [sevFilter, setSev]     = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
-  const filteredLogs = auditLogs.filter(log => 
-    log.action.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    log.details.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const getSeverityBadge = (severity: string) => {
-    switch(severity) {
-      case 'Critical': return <Badge variant="destructive">Critical</Badge>;
-      case 'Warning': return <Badge variant="warning">Warning</Badge>;
-      case 'Info': return <Badge variant="secondary">Info</Badge>;
-      default: return <Badge variant="outline">{severity}</Badge>;
+  const fetchLogs = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const rows = await auditLogsApi.list({
+        search:   search   || undefined,
+        type:     typeFilter || undefined,
+        severity: sevFilter  || undefined,
+        limit: 200,
+      });
+      setLogs(rows);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to load audit logs');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [search, typeFilter, sevFilter]);
 
-  const getTypeIcon = (type: string) => {
-    switch(type) {
-      case 'User': return <User className="w-4 h-4 text-blue-500" />;
-      case 'System': return <Activity className="w-4 h-4 text-green-500" />;
-      case 'Config': return <Settings className="w-4 h-4 text-purple-500" />;
-      default: return <Clock className="w-4 h-4 text-gray-500" />;
-    }
-  };
+  useEffect(() => {
+    const t = setTimeout(fetchLogs, search ? 350 : 0);
+    return () => clearTimeout(t);
+  }, [fetchLogs, search]);
+
+  function handleExport() {
+    const csv  = toCSV(logs);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `audit-logs-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const activeFilters = [typeFilter, sevFilter].filter(Boolean).length;
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Audit Logs</h1>
-          <p className="text-muted-foreground mt-1">Comprehensive track of all user actions, system events, and configuration changes.</p>
+          <p className="text-muted-foreground mt-1">
+            Comprehensive record of all user actions, system events, and configuration changes.
+          </p>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Export Logs
-          </Button>
-        </div>
+        <Button variant="outline" onClick={handleExport} disabled={!logs.length}>
+          <Download className="w-4 h-4 mr-2" />
+          Export CSV
+        </Button>
       </div>
 
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 bg-muted/50 rounded-md px-3 py-2 w-96 border">
-              <Search className="w-4 h-4 text-muted-foreground" />
-              <input 
-                type="text" 
-                placeholder="Search logs by user, action, or details..." 
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-2 w-96 border">
+              <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+              <input
+                type="text"
+                placeholder="Search by user, action, or details…"
                 className="bg-transparent border-none outline-none text-sm w-full"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
               />
+              {search && (
+                <button onClick={() => setSearch('')}>
+                  <X className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
+                </button>
+              )}
             </div>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(v => !v)}
+                className={activeFilters ? 'border-amber-400 text-amber-700' : ''}
+              >
                 <Filter className="w-4 h-4 mr-2" />
-                Filter
+                Filter {activeFilters ? `(${activeFilters})` : ''}
               </Button>
+              {activeFilters > 0 && (
+                <Button variant="ghost" size="sm" onClick={() => { setType(''); setSev(''); }}>
+                  Clear
+                </Button>
+              )}
             </div>
           </div>
+
+          {showFilters && (
+            <div className="flex gap-3 mt-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground font-medium">Type:</span>
+                {TYPE_OPTIONS.map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setType(prev => prev === t ? '' : t)}
+                    className={`text-xs px-2 py-1 rounded border transition-colors ${
+                      typeFilter === t
+                        ? 'bg-stone-800 text-white border-stone-800'
+                        : 'bg-white text-stone-600 border-stone-200 hover:border-stone-400'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground font-medium">Severity:</span>
+                {SEV_OPTIONS.map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setSev(prev => prev === s ? '' : s)}
+                    className={`text-xs px-2 py-1 rounded border transition-colors ${
+                      sevFilter === s
+                        ? 'bg-stone-800 text-white border-stone-800'
+                        : 'bg-white text-stone-600 border-stone-200 hover:border-stone-400'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </CardHeader>
+
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Timestamp</TableHead>
-                <TableHead>User / Source</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Severity</TableHead>
-                <TableHead>Details</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredLogs.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell className="text-xs font-mono text-muted-foreground">
-                    {format(log.timestamp, 'yyyy-MM-dd HH:mm:ss')}
-                  </TableCell>
-                  <TableCell className="font-medium">{log.user}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      {getTypeIcon(log.type)}
-                      <span className="text-xs font-medium">{log.type}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-semibold">{log.action}</TableCell>
-                  <TableCell>{getSeverityBadge(log.severity)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground max-w-md truncate">
-                    {log.details}
-                  </TableCell>
+          {loading ? (
+            <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-sm">Loading audit logs…</span>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <p className="text-sm text-destructive">{error}</p>
+              <Button variant="outline" size="sm" onClick={fetchLogs}>Retry</Button>
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
+              <Clock className="w-8 h-8 opacity-30" />
+              <p className="text-sm">No audit events found.</p>
+              {(search || typeFilter || sevFilter) && (
+                <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setType(''); setSev(''); }}>
+                  Clear filters
+                </Button>
+              )}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-40">Timestamp</TableHead>
+                  <TableHead>User</TableHead>
+                  <TableHead className="w-24">Type</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead className="w-24">Severity</TableHead>
+                  <TableHead>Details</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {logs.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell className="text-xs font-mono text-muted-foreground whitespace-nowrap">
+                      {format(new Date(log.created_at), 'yyyy-MM-dd HH:mm:ss')}
+                    </TableCell>
+                    <TableCell className="font-medium text-sm">{log.user_email}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        {typeIcon(log.type)}
+                        <span className="text-xs font-medium">{log.type}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-semibold text-sm">{log.action}</TableCell>
+                    <TableCell>{severityBadge(log.severity)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground max-w-sm truncate">
+                      {detailsText(log)}
+                      {log.resource_type && (
+                        <span className="ml-2 text-xs text-stone-400 font-mono">
+                          {log.resource_type}/{log.resource_id}
+                        </span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+
+          {!loading && logs.length > 0 && (
+            <p className="text-xs text-muted-foreground mt-3 text-right">
+              {logs.length} event{logs.length !== 1 ? 's' : ''}
+              {logs.length === 200 ? ' (showing latest 200)' : ''}
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

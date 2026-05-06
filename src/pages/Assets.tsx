@@ -19,12 +19,6 @@ import {
   AppWindow, Layers
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import {
-  storage,
-  ref,
-  uploadBytes,
-  getDownloadURL,
-} from '../firebase';
 import { assetsApi } from '../lib/api';
 import { GoogleGenAI } from "@google/genai";
 import Markdown from 'react-markdown';
@@ -158,9 +152,15 @@ export function Assets() {
     if (!file || !selectedAsset) return;
     setIsUploadingDoc(true);
     try {
-      const storageRef = ref(storage, `assets/${selectedAsset.id}/${file.name}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('jwt') || ''}` },
+        body: formData,
+      });
+      if (!res.ok) throw new Error('Upload failed');
+      const { url } = await res.json();
       await assetsApi.addDoc(selectedAsset.id, { name: file.name, url, type: file.type });
       const rows = await assetsApi.listDocs(selectedAsset.id);
       setAssetDocuments(rows.map((r: any) => ({

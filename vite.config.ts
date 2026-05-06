@@ -7,6 +7,9 @@ export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
     plugins: [react(), tailwindcss()],
+    optimizeDeps: {
+      include: ['framer-motion', 'motion-dom'],
+    },
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.AUTH_BYPASS': JSON.stringify(env.AUTH_BYPASS),
@@ -23,6 +26,16 @@ export default defineConfig(({mode}) => {
       strictPort: true,
       host: true,
       hmr: process.env.DISABLE_HMR !== 'true',
+      proxy: {
+        '/api': {
+          target: `http://localhost:${env.API_PORT || '4000'}`,
+          changeOrigin: true,
+        },
+      },
+    },
+    preview: {
+      port: 8080,
+      host: true,
       proxy: {
         '/api': {
           target: `http://localhost:${env.API_PORT || '4000'}`,

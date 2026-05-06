@@ -1,5 +1,3 @@
-import { auth } from '../firebase';
-
 export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
@@ -9,44 +7,26 @@ export enum OperationType {
   WRITE = 'write',
 }
 
-export interface FirestoreErrorInfo {
+export interface ErrorInfo {
   error: string;
   operationType: OperationType;
   path: string | null;
-  authInfo: {
+  userInfo: {
     userId?: string;
     email?: string | null;
-    emailVerified?: boolean;
-    isAnonymous?: boolean;
-    tenantId?: string | null;
-    providerInfo?: {
-      providerId: string;
-      displayName: string | null;
-      email: string | null;
-      photoUrl: string | null;
-    }[];
   }
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
+export function handleError(error: unknown, operationType: OperationType, path: string | null, userId?: string, email?: string | null) {
+  const errInfo: ErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
-        providerId: provider.providerId,
-        displayName: provider.displayName,
-        email: provider.email,
-        photoUrl: provider.photoURL
-      })) || []
-    },
     operationType,
-    path
+    path,
+    userInfo: {
+      userId,
+      email,
+    },
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  console.error('Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }

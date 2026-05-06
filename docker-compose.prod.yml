@@ -8,7 +8,7 @@
 #   docker compose -f docker-compose.prod.yml exec -T postgres psql -U argus -d argus -v ON_ERROR_STOP=1 < server/migrations/001_initial.sql
 #   docker compose -f docker-compose.prod.yml exec -T postgres psql -U argus -d argus -v ON_ERROR_STOP=1 < server/migrations/002_assets.sql
 
-name: argus-prod
+version: "3.8"
 
 services:
   postgres:
@@ -39,6 +39,7 @@ services:
       PG_USER: argus
       PG_PASSWORD: ${PG_PASSWORD:-changeme}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      JWT_SECRET: ${JWT_SECRET:-changeme-set-a-real-secret}
       GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-}
     depends_on:
       postgres:

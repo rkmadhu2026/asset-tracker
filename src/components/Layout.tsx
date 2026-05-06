@@ -1,242 +1,475 @@
 import React, { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Server, FileCode2, ShieldAlert, CheckCircle, Settings, Bell, User, ClipboardList, Building2, Menu, X, Network, Terminal, Layers, Activity, LogOut, Sparkles, Users, FileText, AlertTriangle } from 'lucide-react';
+import {
+  LayoutDashboard, Server, FileCode2, Bell, User, ClipboardList,
+  Building2, Menu, X, Terminal, Layers, Activity,
+  LogOut, Sparkles, Users, AlertTriangle, Database, MapPin,
+  ChevronDown, Shield, ChevronRight, Search, Layout as RackIcon,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { useAuth } from './AuthProvider';
 import { useClient } from './ClientProvider';
-import { Layout as LayoutIcon } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: Building2, label: 'Clients', path: '/clients' },
-  { icon: Server, label: 'Sites', path: '/sites' },
-  { icon: Server, label: 'CMDB / Assets', path: '/assets' },
-  { icon: FileText, label: 'Asset Details', path: '/assets/AS-1001' },
-  { icon: LayoutIcon, label: 'Rack Management', path: '/racks' },
-  { icon: Network, label: 'Infrastructure', path: '/infrastructure' },
-  { icon: Sparkles, label: 'Onboarding', path: '/onboarding' },
-  { icon: Activity, label: 'Monitoring', path: '/monitoring' },
-  { icon: Layers, label: 'Network Topology', path: '/topology' },
-  { icon: FileCode2, label: 'Configurations', path: '/configs' },
-  { icon: Terminal, label: 'Automation', path: '/automation' },
-  { icon: ShieldAlert, label: 'Vulnerabilities', path: '/vulnerabilities' },
-  { icon: CheckCircle, label: 'Compliance', path: '/compliance' },
-  { icon: ClipboardList, label: 'Audit Log', path: '/audit-log' },
+const FONT_DISPLAY = "'Lora', Georgia, serif";
+const FONT_MONO    = "'JetBrains Mono', monospace";
+
+const ACC   = '#C8622E';
+const ACC_BG = '#FAE8DC';
+const WARM_BDR = '#E8E1D8';
+const WARM_BG  = '#FDFAF7';
+const WARM_HOVER = '#F0EAE0';
+const DIM   = '#A09688';
+const TEXT  = '#19160F';
+const TEXT2 = '#6B6458';
+
+const navSections = [
+  {
+    label: 'Inventory',
+    items: [
+      { icon: LayoutDashboard, label: 'Dashboard',       path: '/' },
+      { icon: Building2,       label: 'Clients',         path: '/clients' },
+      { icon: MapPin,          label: 'Sites',           path: '/sites' },
+      { icon: Database,        label: 'CMDB / Assets',   path: '/assets' },
+      { icon: RackIcon,        label: 'Rack Management', path: '/racks' },
+    ],
+  },
+  {
+    label: 'Network',
+    items: [
+      { icon: Server,   label: 'Infrastructure', path: '/infrastructure' },
+      { icon: Layers,   label: 'Topology',       path: '/topology' },
+      { icon: Activity, label: 'Monitoring',     path: '/monitoring' },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { icon: FileCode2,     label: 'Configurations', path: '/configs' },
+      { icon: Terminal,      label: 'Automation',     path: '/automation' },
+      { icon: Sparkles,      label: 'Onboarding',     path: '/onboarding' },
+      { icon: ClipboardList, label: 'Audit Log',      path: '/audit-log' },
+    ],
+  },
 ];
 
-export function Layout() {
-  const location = useLocation();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, profile, signOut, isAdmin, apiSyncFailed } = useAuth();
-  const { rootClients, selectedClientId, setSelectedClientId } = useClient();
+function userInitials(displayName?: string | null, email?: string | null) {
+  if (displayName) {
+    const parts = displayName.trim().split(' ');
+    return parts.length > 1
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : parts[0].slice(0, 2).toUpperCase();
+  }
+  return (email ?? 'U').slice(0, 2).toUpperCase();
+}
 
-  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+/* ── Sidebar nav ────────────────────────────────────────────────────────── */
+function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+  const location = useLocation();
+  const { isAdmin } = useAuth();
 
   return (
-      <div className="flex h-screen w-full overflow-hidden bg-slate-50 text-foreground">
-      {/* Sidebar — Desktop */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-gradient-to-b from-white via-slate-50 to-slate-100 shadow-sm lg:flex">
-        <div className="flex h-16 shrink-0 items-center border-b border-slate-200 px-6">
-          <Server className="mr-2 h-6 w-6 shrink-0 text-primary" strokeWidth={2} />
-          <div className="min-w-0">
-            <span className="font-[family-name:var(--font-display)] text-lg font-semibold leading-none tracking-tight text-foreground">
-              Argus
-            </span>
-            <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-              Asset tracker
-            </p>
-          </div>
-        </div>
-        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-primary/12 text-primary shadow-sm'
-                    : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground',
-                )}
-              >
-                <item.icon className="w-5 h-5 mr-3" />
-                {item.label}
-              </Link>
-            );
-          })}
-          {isAdmin && (
-            <Link
-              to="/users"
-              className={cn(
-                "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                location.pathname === '/users'
-                  ? "bg-primary/10 text-primary" 
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
+    <nav className="flex-1 overflow-y-auto px-2 py-4" style={{ gap: 0 }}>
+      {navSections.map((section, si) => (
+        <div key={section.label} className={si > 0 ? 'mt-5' : ''}>
+          {/* Section label with thin rule */}
+          <div className="flex items-center gap-2 px-3 mb-1.5">
+            <span className="h-px flex-1" style={{ background: WARM_BDR }} />
+            <span
+              className="text-[9.5px] font-bold uppercase tracking-[0.18em] select-none"
+              style={{ color: DIM }}
             >
-              <Users className="w-5 h-5 mr-3" />
-              Users Management
-            </Link>
-          )}
-        </nav>
-        <div className="p-4 border-t">
-          <div className="flex items-center text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-            <Settings className="w-4 h-4 mr-2" />
-            <span>Settings</span>
+              {section.label}
+            </span>
+          </div>
+
+          <div className="space-y-0.5">
+            {section.items.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={onNavigate}
+                  className="relative group flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-[13px] font-medium transition-all duration-150"
+                  style={{
+                    background: isActive ? ACC_BG : 'transparent',
+                    color: isActive ? ACC : TEXT2,
+                  }}
+                  onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = WARM_HOVER; (e.currentTarget as HTMLElement).style.color = TEXT; }}
+                  onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = TEXT2; } }}
+                >
+                  {/* Active left indicator */}
+                  {isActive && (
+                    <span
+                      className="absolute left-0 top-1/4 bottom-1/4 w-[2.5px] rounded-full"
+                      style={{ background: ACC }}
+                    />
+                  )}
+                  <item.icon
+                    className="h-[14px] w-[14px] shrink-0 transition-colors"
+                    style={{ color: isActive ? ACC : undefined, opacity: isActive ? 1 : 0.6 }}
+                  />
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              );
+            })}
           </div>
         </div>
-      </aside>
+      ))}
 
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm lg:hidden"
-          onClick={toggleMobileMenu}
-        >
-          <aside
-            className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-slate-200 bg-gradient-to-b from-white via-slate-50 to-slate-100 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
+      {isAdmin && (
+        <div className="mt-5">
+          <div className="flex items-center gap-2 px-3 mb-1.5">
+            <span className="h-px flex-1" style={{ background: WARM_BDR }} />
+            <span className="text-[9.5px] font-bold uppercase tracking-[0.18em] select-none" style={{ color: DIM }}>Admin</span>
+          </div>
+          <Link
+            to="/users"
+            onClick={onNavigate}
+            className="relative group flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-[13px] font-medium transition-all duration-150"
+            style={{
+              background: location.pathname === '/users' ? ACC_BG : 'transparent',
+              color: location.pathname === '/users' ? ACC : TEXT2,
+            }}
+            onMouseEnter={e => { if (location.pathname !== '/users') { (e.currentTarget as HTMLElement).style.background = WARM_HOVER; (e.currentTarget as HTMLElement).style.color = TEXT; } }}
+            onMouseLeave={e => { if (location.pathname !== '/users') { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = TEXT2; } }}
           >
-            <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-6">
-              <div className="flex min-w-0 items-center">
-                <Server className="mr-2 h-6 w-6 shrink-0 text-primary" strokeWidth={2} />
-                <div className="min-w-0">
-                  <span className="font-[family-name:var(--font-display)] text-lg font-semibold leading-none tracking-tight">
-                    Argus
-                  </span>
-                  <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                    Asset tracker
-                  </p>
-                </div>
-              </div>
-              <Button variant="ghost" size="icon" onClick={toggleMobileMenu}>
-                <X className="h-5 w-5" />
-              </Button>
+            {location.pathname === '/users' && (
+              <span className="absolute left-0 top-1/4 bottom-1/4 w-[2.5px] rounded-full" style={{ background: ACC }} />
+            )}
+            <Users className="h-[14px] w-[14px] shrink-0" style={{ color: location.pathname === '/users' ? ACC : undefined, opacity: location.pathname === '/users' ? 1 : 0.6 }} />
+            <span>Users</span>
+          </Link>
+        </div>
+      )}
+    </nav>
+  );
+}
+
+/* ── Client selector ────────────────────────────────────────────────────── */
+function ClientSelector() {
+  const { rootClients, selectedClientId, setSelectedClientId } = useClient();
+  const selected = rootClients.find(c => c.id === selectedClientId);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative px-2">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2 transition-all duration-150 text-[12px] font-medium"
+        style={{
+          background: open ? ACC_BG : WARM_HOVER,
+          border: `1px solid ${open ? `${ACC}33` : WARM_BDR}`,
+          color: TEXT,
+        }}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="h-4 w-4 shrink-0 rounded-sm flex items-center justify-center" style={{ background: `${ACC}22` }}>
+            <Shield className="h-2.5 w-2.5" style={{ color: ACC }} />
+          </div>
+          <span className="truncate">{selected?.name ?? 'All Clients'}</span>
+        </div>
+        <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 transition-transform duration-200', open && 'rotate-180')} style={{ color: DIM }} />
+      </button>
+
+      {open && (
+        <div
+          className="absolute left-2 right-2 top-full mt-1.5 z-50 rounded-xl overflow-hidden"
+          style={{ border: `1px solid ${WARM_BDR}`, background: '#fff', boxShadow: '0 8px 32px -8px rgba(41,37,36,0.18)' }}
+        >
+          <div className="p-1 space-y-0.5">
+            <button
+              onClick={() => { setSelectedClientId(null); setOpen(false); }}
+              className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] transition-colors"
+              style={{
+                background: !selectedClientId ? ACC_BG : 'transparent',
+                color: !selectedClientId ? ACC : TEXT2,
+                fontWeight: !selectedClientId ? 600 : 400,
+              }}
+            >
+              {!selectedClientId && <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: ACC }} />}
+              All Clients
+            </button>
+            {rootClients.map(c => (
+              <button
+                key={c.id}
+                onClick={() => { setSelectedClientId(c.id); setOpen(false); }}
+                className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] transition-colors"
+                style={{
+                  background: selectedClientId === c.id ? ACC_BG : 'transparent',
+                  color: selectedClientId === c.id ? ACC : TEXT2,
+                  fontWeight: selectedClientId === c.id ? 600 : 400,
+                }}
+              >
+                {selectedClientId === c.id && <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: ACC }} />}
+                {c.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Sidebar shell ──────────────────────────────────────────────────────── */
+function SidebarShell({ children, className, style, ...props }: React.HTMLAttributes<HTMLElement> & { children: React.ReactNode; className?: string }) {
+  return (
+    <aside
+      className={cn('flex flex-col', className)}
+      style={{ background: WARM_BG, borderRight: `1px solid ${WARM_BDR}`, ...style }}
+      {...props}
+    >
+      {children}
+    </aside>
+  );
+}
+
+/* ── Logo ───────────────────────────────────────────────────────────────── */
+function SidebarLogo() {
+  return (
+    <div className="flex h-[58px] shrink-0 items-center gap-3 px-4" style={{ borderBottom: `1px solid ${WARM_BDR}` }}>
+      <div
+        className="relative flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-xl"
+        style={{
+          background: 'linear-gradient(135deg, #C8622E 0%, #A84E24 100%)',
+          boxShadow: '0 4px 14px -4px rgba(200,98,46,0.5)',
+        }}
+      >
+        <Shield className="h-[17px] w-[17px] text-white" strokeWidth={2} />
+      </div>
+      <div className="min-w-0">
+        <p
+          className="text-[15px] font-semibold leading-none tracking-tight"
+          style={{ fontFamily: FONT_DISPLAY, color: TEXT }}
+        >
+          Argus
+        </p>
+        <div className="flex items-center gap-1.5 mt-[5px]">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          <p className="text-[9.5px] font-medium uppercase tracking-wider leading-none" style={{ color: DIM }}>
+            LinkedEye · Asset Intelligence
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Main layout ────────────────────────────────────────────────────────── */
+export function Layout() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, signOut, apiSyncFailed } = useAuth();
+  const location = useLocation();
+
+  const initials = userInitials(user?.displayName, user?.email);
+
+  const pageTitle = (() => {
+    const flat = navSections.flatMap(s => s.items);
+    return flat.find(i => i.path === location.pathname)?.label ?? 'Argus';
+  })();
+
+  const breadcrumb = (() => {
+    const flat = navSections.flatMap(s => s.items.map(i => ({ ...i, section: s.label })));
+    const match = flat.find(i => i.path === location.pathname);
+    return match ? match.section : null;
+  })();
+
+  return (
+    <div className="flex h-screen w-full overflow-hidden" style={{ background: '#F7F3ED', color: TEXT }}>
+
+      {/* ── Desktop Sidebar ─────────────────────────────────────────── */}
+      <SidebarShell className="hidden lg:flex w-[230px] shrink-0">
+        <SidebarLogo />
+
+        {/* Client context */}
+        <div className="pt-3 pb-3" style={{ borderBottom: `1px solid ${WARM_BDR}` }}>
+          <p className="px-5 mb-2 text-[9.5px] font-bold uppercase tracking-[0.16em] select-none" style={{ color: DIM }}>
+            Context
+          </p>
+          <ClientSelector />
+        </div>
+
+        <SidebarNav />
+
+        {/* User footer */}
+        <div className="shrink-0 p-2" style={{ borderTop: `1px solid ${WARM_BDR}` }}>
+          <div
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 transition-colors group cursor-default"
+            style={{ background: 'transparent' }}
+            onMouseEnter={e => (e.currentTarget.style.background = WARM_HOVER)}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          >
+            {/* Initials avatar */}
+            <div
+              className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold text-white"
+              style={{ background: `linear-gradient(135deg, ${ACC} 0%, #A84E24 100%)` }}
+            >
+              {initials}
             </div>
-            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-              {navItems.map((item) => {
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    onClick={toggleMobileMenu}
-                    className={cn(
-                      'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-primary/12 text-primary shadow-sm'
-                        : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground',
-                    )}
-                  >
-                    <item.icon className="w-5 h-5 mr-3" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-              {isAdmin && (
-                <Link
-                  to="/users"
-                  onClick={toggleMobileMenu}
-                  className={cn(
-                    'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                    location.pathname === '/users'
-                      ? 'bg-primary/12 text-primary shadow-sm'
-                      : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground',
-                  )}
+            <div className="min-w-0 flex-1">
+              <p className="text-[12px] font-semibold truncate leading-none" style={{ color: TEXT }}>
+                {user?.displayName || user?.email?.split('@')[0] || 'User'}
+              </p>
+              <p className="text-[9px] uppercase font-bold mt-0.5 leading-none tracking-wide" style={{ color: DIM }}>
+                {user?.role ?? 'Viewer'}
+              </p>
+            </div>
+            <button
+              onClick={signOut}
+              title="Sign out"
+              className="p-1 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+              style={{ color: DIM }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+              onMouseLeave={e => (e.currentTarget.style.color = DIM)}
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      </SidebarShell>
+
+      {/* ── Mobile Sidebar ──────────────────────────────────────────── */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
+          <div className="absolute inset-0 bg-[#19160F]/50 backdrop-blur-sm" />
+          <SidebarShell
+            className="absolute inset-y-0 left-0 flex w-64 shadow-2xl"
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          >
+            <div className="flex h-[58px] items-center justify-between px-4" style={{ borderBottom: `1px solid ${WARM_BDR}` }}>
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #C8622E 0%, #A84E24 100%)' }}
                 >
-                  <Users className="w-5 h-5 mr-3" />
-                  Users Management
-                </Link>
-              )}
-            </nav>
-          </aside>
+                  <Shield className="h-4 w-4 text-white" />
+                </div>
+                <p className="text-[14px] font-semibold" style={{ fontFamily: FONT_DISPLAY, color: TEXT }}>Argus</p>
+              </div>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="p-1 rounded-md" style={{ color: TEXT2 }}>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="pt-3 pb-3" style={{ borderBottom: `1px solid ${WARM_BDR}` }}>
+              <ClientSelector />
+            </div>
+            <SidebarNav onNavigate={() => setIsMobileMenuOpen(false)} />
+          </SidebarShell>
         </div>
       )}
 
-      {/* Main Content */}
+      {/* ── Main area ───────────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Header */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur-sm sm:px-6">
-          <div className="flex items-center">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="lg:hidden mr-2" 
-              onClick={toggleMobileMenu}
+
+        {/* ── Header ─────────────────────────────────────────────────── */}
+        <header
+          className="flex h-[54px] shrink-0 items-center justify-between px-4 sm:px-5"
+          style={{
+            background: 'rgba(253,250,247,0.92)',
+            borderBottom: `1px solid ${WARM_BDR}`,
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <button
+              className="lg:hidden p-1.5 rounded-lg transition-colors"
+              style={{ color: TEXT2 }}
+              onMouseEnter={e => (e.currentTarget.style.background = WARM_HOVER)}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              onClick={() => setIsMobileMenuOpen(true)}
             >
-              <Menu className="w-5 h-5" />
-            </Button>
-            <div className="hidden sm:flex items-center text-sm text-muted-foreground mr-4">
-              <span className="font-medium text-foreground mr-2">Client:</span>
-              <div className="w-44">
-                <Select
-                  value={selectedClientId || ''}
-                  onValueChange={val => setSelectedClientId(val === '' ? null : val)}
-                >
-                  <SelectValue placeholder="Select Client" />
-                  <SelectContent>
-                    {rootClients.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Link to="/clients" className="hidden md:flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition-colors mr-4">
-              <Building2 className="w-4 h-4 mr-1.5" />
-              Manage Clients
-            </Link>
-            <Link to="/assets/AS-1001" className="hidden md:flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition-colors mr-4">
-              <FileText className="w-4 h-4 mr-1.5" />
-              Asset Details
-            </Link>
-            <div className="font-[family-name:var(--font-display)] sm:hidden text-lg font-semibold tracking-tight text-primary">
-              Argus
+              <Menu className="h-[18px] w-[18px]" />
+            </button>
+            <div className="flex items-center gap-2 text-[13px]">
+              {breadcrumb && (
+                <>
+                  <span className="hidden sm:inline text-[12px]" style={{ color: DIM }}>{breadcrumb}</span>
+                  <ChevronRight className="h-3 w-3 hidden sm:inline" style={{ color: DIM }} />
+                </>
+              )}
+              <span
+                className="font-semibold text-[15px]"
+                style={{ fontFamily: FONT_DISPLAY, color: TEXT }}
+              >
+                {pageTitle}
+              </span>
             </div>
           </div>
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            <button className="text-muted-foreground hover:text-foreground relative p-2">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-card"></span>
+
+          <div className="flex items-center gap-1">
+            {/* Search */}
+            <button
+              className="p-2 rounded-lg transition-colors"
+              style={{ color: TEXT2 }}
+              onMouseEnter={e => (e.currentTarget.style.background = WARM_HOVER)}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <Search className="h-[16px] w-[16px]" />
             </button>
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center space-x-2">
-                {user?.photoURL ? (
-                  <img src={user.photoURL} alt={user.displayName || ''} className="w-8 h-8 rounded-full border border-primary/20" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                    <User className="w-4 h-4" />
-                  </div>
-                )}
-                <div className="hidden md:flex flex-col items-start -space-y-1">
-                  <span className="text-sm font-medium">{user?.displayName || 'User'}</span>
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold">{profile?.role || 'User'}</span>
-                </div>
+
+            {/* Notifications */}
+            <button
+              className="relative p-2 rounded-lg transition-colors"
+              style={{ color: TEXT2 }}
+              onMouseEnter={e => (e.currentTarget.style.background = WARM_HOVER)}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <Bell className="h-[16px] w-[16px]" />
+              <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-red-500 ring-1 ring-[#FDFAF7]" />
+            </button>
+
+            {/* Divider + user */}
+            <div className="hidden md:flex items-center gap-2.5 pl-3 ml-1 border-l" style={{ borderColor: WARM_BDR }}>
+              <div
+                className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold text-white"
+                style={{ background: `linear-gradient(135deg, ${ACC} 0%, #A84E24 100%)` }}
+              >
+                {initials}
               </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={signOut}>
-                <LogOut className="w-4 h-4" />
-              </Button>
+              <div className="leading-none">
+                <p className="text-[12px] font-semibold" style={{ color: TEXT }}>
+                  {user?.displayName || user?.email?.split('@')[0] || 'User'}
+                </p>
+                <p className="text-[9px] uppercase font-bold tracking-wide mt-0.5" style={{ color: DIM }}>
+                  {user?.role ?? 'Viewer'}
+                </p>
+              </div>
             </div>
+
+            <button
+              className="ml-1 p-2 rounded-lg transition-colors"
+              style={{ color: DIM }}
+              onMouseEnter={e => { (e.currentTarget.style.color = '#ef4444'); (e.currentTarget.style.background = 'rgba(239,68,68,0.06)'); }}
+              onMouseLeave={e => { (e.currentTarget.style.color = DIM); (e.currentTarget.style.background = 'transparent'); }}
+              onClick={signOut}
+              title="Sign out"
+            >
+              <LogOut className="h-[15px] w-[15px]" />
+            </button>
           </div>
         </header>
 
+        {/* API sync warning */}
         {apiSyncFailed && (
-          <div className="flex shrink-0 items-start gap-2 border-b border-amber-200/90 bg-amber-50/95 px-4 py-2.5 text-xs text-amber-950 sm:items-center sm:text-sm">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 sm:mt-0" aria-hidden />
+          <div className="flex shrink-0 items-center gap-2 px-5 py-2.5 text-xs"
+            style={{ background: '#FFFBEB', borderBottom: '1px solid #FDE68A', color: '#92400E' }}>
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
             <span>
-              Backend unreachable — signed in with Firebase only. Run{' '}
-              <code className="rounded bg-amber-500/20 px-1 py-0.5 font-mono text-[11px]">npm run server</code>{' '}
-              and ensure Postgres is up (<code className="rounded bg-amber-500/20 px-1 py-0.5 font-mono text-[11px]">npm run db:up</code>) to sync your profile and load CMDB data.
+              Backend unreachable — run{' '}
+              <code className="rounded px-1.5 py-0.5" style={{ fontFamily: FONT_MONO, background: '#FEF3C7', color: '#92400E' }}>
+                npm run server
+              </code>{' '}
+              and{' '}
+              <code className="rounded px-1.5 py-0.5" style={{ fontFamily: FONT_MONO, background: '#FEF3C7', color: '#92400E' }}>
+                npm run db:up
+              </code>{' '}
+              to load CMDB data.
             </span>
           </div>
         )}
 
-        {/* Page Content */}
-        <div className="flex-1 overflow-auto bg-gradient-to-b from-[#faf9f5]/90 to-[#f7f5f0] p-4 sm:p-6">
+        {/* Page content */}
+        <div className="flex-1 overflow-auto p-4 sm:p-6">
           <div className="max-w-7xl mx-auto">
             <Outlet />
           </div>

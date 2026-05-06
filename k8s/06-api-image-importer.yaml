@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: asset-manager-api-image-importer
+  namespace: asset-manager
+spec:
+  restartPolicy: Never
+  containers:
+    - name: importer
+      image: alpine:3.20
+      command:
+        - /bin/sh
+        - -lc
+        - |
+          chroot /host /usr/bin/ctr -n k8s.io images import /tmp/asset-manager-api.tar
+      securityContext:
+        privileged: true
+      volumeMounts:
+        - name: host-root
+          mountPath: /host
+  volumes:
+    - name: host-root
+      hostPath:
+        path: /
+        type: Directory

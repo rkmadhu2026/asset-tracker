@@ -1,0 +1,36 @@
+Feature ID,Feature Name,Category,Phase,Priority,Status,Owner,Target Sprint,Depends On,Notes
+FR-001,JWT Auth (login / register / me),Auth,1 – Foundation,P0,Done,Backend,S1,,Local password auth fully wired; users table with password_hash
+FR-002,Admin bootstrap (hardcoded email),Auth,1 – Foundation,P0,Done,Backend,S1,FR-001,rajkumarmadhu2024@gmail.com treated as admin; in AuthProvider.tsx + users route
+FR-003,Role-based access (admin / developer / viewer),Auth,1 – Foundation,P0,Done,Full-stack,S1,FR-001,requireAuth / requireAdmin middleware; /users route gated in App.tsx
+FR-004,Client hierarchy CMDB (clients → sites),Data Model,1 – Foundation,P0,Done,Backend,S1,,001_initial.sql; site_clients many-to-many join table present
+FR-005,Rack management,Data Model,1 – Foundation,P0,Done,Backend,S1,FR-004,racks table with site_id FK; import-racks.mjs available
+FR-006,Infrastructure device CMDB,Data Model,1 – Foundation,P0,Done,Backend,S1,FR-005,infrastructure table + 7 API endpoints; Excel import script
+FR-007,Asset CMDB (richer shape),Data Model,1 – Foundation,P0,Done,Backend,S2,FR-006,002_assets.sql; 12 REST endpoints; asset_documents table
+FR-008,Configuration tasks + drift detection,Config Mgmt,1 – Foundation,P0,Done,Backend,S2,FR-006,configuration_tasks + drifts tables; routes wired
+FR-009,Device templates,Config Mgmt,1 – Foundation,P1,Done,Backend,S2,,device_templates table + CRUD route
+FR-010,PostgreSQL migrations (001–005),DevOps,1 – Foundation,P0,Done,Backend,S1,,db-migrate.sh applies all 5 migrations in order
+FR-011,Docker Compose (dev + prod),DevOps,1 – Foundation,P1,Done,DevOps,S1,,docker-compose.yml + docker-compose.prod.yml present
+FR-012,Kubernetes manifests (00–06),DevOps,1 – Foundation,P1,Done,DevOps,S2,,k8s/ dir with namespace / secrets / postgres / api / web
+FR-013,Excel bulk import (infrastructure + racks),Data Import,1 – Foundation,P1,Done,Backend,S2,,import-from-excel.mjs + import-racks.mjs; 8 xlsx files in repo
+FR-014,Gemini AI chat assistant (NetworkAI),AI,2 – Operations,P1,Done,Frontend,S2,,GoogleGenAI mounted globally; chat history stored in chats table (005_chats.sql)
+FR-015,Network topology visualizer,Observability,2 – Operations,P1,Done,Frontend,S3,FR-006,ReactFlow; derives nodes from real infra API; physical + logical view modes
+FR-016,Dashboard KPI cards (real data),Observability,2 – Operations,P0,Done,Frontend,S3,FR-007,Dashboard.tsx fetches real counts from API
+FR-017,Client-scoped data filtering,Multi-tenancy,2 – Operations,P0,Done,Frontend,S2,FR-004,ClientProvider + SiteProvider; selectedClientFamily propagates to all pages
+FR-018,File upload (device docs),Data Model,2 – Operations,P2,Done,Backend,S2,,upload.ts + /uploads static dir; asset_documents + device_documents tables
+FR-019,Monitoring page — real ICMP/SNMP metrics,Observability,2 – Operations,P0,Stub,Backend,S4,FR-006,Monitoring.tsx wired to infra API for device list; fakeLatency/fakeUptime used for metrics — no real polling
+FR-020,Audit log — real persistence + API,Compliance,2 – Operations,P1,Stub,Backend,S4,FR-001,audit_logs table exists in DB; NO /api/audit-logs route; AuditLog.tsx uses hardcoded array
+FR-021,Network automation engine (script runner),Automation,3 – Automation,P1,Stub,Backend,S5,,Automation.tsx has hardcoded scripts + build history; no automation tables or API route
+FR-022,Device onboarding/offboarding workflow,Lifecycle,3 – Automation,P2,Stub,Full-stack,S5,FR-006,Onboarding.tsx simulates AI processing with setTimeout; no DB persistence
+FR-023,Keycloak OIDC SSO integration,Auth,3 – Automation,P1,Missing,Backend,S6,FR-001,Currently local JWT only; Keycloak DEV instance exists at fs-le-dev-keycloak.finspot.in
+FR-024,Real-time SSE push (device state changes),Observability,3 – Automation,P2,Missing,Backend,S6,FR-019,Architecture designed (mentions SSE) but no /api/realtime/stream endpoint implemented
+FR-025,SNMP / ICMP polling daemon,Observability,3 – Automation,P0,Missing,Backend,S5,,Pre-requisite for FR-019; no poller service exists — needs separate worker or cron
+FR-026,Config backup scheduler (cron),Config Mgmt,3 – Automation,P1,Missing,Backend,S5,FR-008,DB CronJob pattern exists in postgresql/07-backup-cronjob.yaml (infra level); not app-level
+FR-027,Vulnerability scan integration,Security,4 – Compliance,P1,Missing,Backend,S7,,Was originally a page (Vulnerabilities.tsx now deleted); needs scanner API integration
+FR-028,Compliance check engine (CIS / RBI),Compliance,4 – Compliance,P1,Missing,Backend,S7,,Compliance.tsx deleted; RBI IT framework mapping needed for financial clients
+FR-029,Report generation (PDF / Excel export),Reporting,4 – Compliance,P2,Missing,Frontend,S7,,AuditLog has Export button (no-op); Assets has export concept but not wired
+FR-030,Multi-tenant RBAC (row-level client isolation),Multi-tenancy,4 – Compliance,P0,Missing,Backend,S6,FR-023,Server routes not yet filtering by authenticated user's client scope — all admin sees all data
+FR-031,Password reset / forgot password flow,Auth,2 – Operations,P1,Missing,Full-stack,S4,FR-001,Login.tsx has no forgot-password link; no reset token table or route
+FR-032,User invite flow (email-based),Auth,3 – Automation,P2,Missing,Full-stack,S5,FR-031,Users page shows user list + role edit but no invite mechanism
+FR-033,Device config versioning (git-style diff),Config Mgmt,3 – Automation,P2,Missing,Backend,S6,FR-008,infrastructure.config TEXT column exists; no versioning/diff logic
+FR-034,Webhook / alerting (PagerDuty / Slack),Observability,4 – Compliance,P2,Missing,Backend,S7,FR-025,No notification service; needed for monitoring escalation
+FR-035,API rate limiting + audit trail,Security,2 – Operations,P1,Missing,Backend,S4,,No express-rate-limit or per-user throttling on API

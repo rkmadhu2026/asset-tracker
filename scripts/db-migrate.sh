@@ -21,6 +21,9 @@ if command -v psql >/dev/null 2>&1; then
     psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$ROOT/server/migrations/001_initial.sql"
     psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$ROOT/server/migrations/002_assets.sql"
     psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$ROOT/server/migrations/003_infrastructure_config.sql"
+    psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$ROOT/server/migrations/004_add_password_hash.sql"
+    psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$ROOT/server/migrations/005_chats.sql"
+    psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$ROOT/server/migrations/006_audit_logs_extend.sql"
   else
     export PGPASSWORD="${PG_PASSWORD:-changeme}"
     HOST="${PG_HOST:-localhost}"
@@ -30,12 +33,18 @@ if command -v psql >/dev/null 2>&1; then
     psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -v ON_ERROR_STOP=1 -f "$ROOT/server/migrations/001_initial.sql"
     psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -v ON_ERROR_STOP=1 -f "$ROOT/server/migrations/002_assets.sql"
     psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -v ON_ERROR_STOP=1 -f "$ROOT/server/migrations/003_infrastructure_config.sql"
+    psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -v ON_ERROR_STOP=1 -f "$ROOT/server/migrations/004_add_password_hash.sql"
+    psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -v ON_ERROR_STOP=1 -f "$ROOT/server/migrations/005_chats.sql"
+    psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -v ON_ERROR_STOP=1 -f "$ROOT/server/migrations/006_audit_logs_extend.sql"
   fi
 elif [[ -f "$ROOT/docker-compose.yml" ]] && "${COMPOSE[@]}" exec -T db true 2>/dev/null; then
   echo "Using Docker Postgres (psql not installed locally)…"
   migrate_docker "$ROOT/server/migrations/001_initial.sql"
   migrate_docker "$ROOT/server/migrations/002_assets.sql"
   migrate_docker "$ROOT/server/migrations/003_infrastructure_config.sql"
+  migrate_docker "$ROOT/server/migrations/004_add_password_hash.sql"
+  migrate_docker "$ROOT/server/migrations/005_chats.sql"
+  migrate_docker "$ROOT/server/migrations/006_audit_logs_extend.sql"
 else
   echo "PostgreSQL migrations need either:" >&2
   echo "  • psql on your PATH, or" >&2
@@ -43,4 +52,4 @@ else
   exit 1
 fi
 
-echo "PostgreSQL migrations finished (001_initial + 002_assets + 003_infrastructure_config)."
+echo "PostgreSQL migrations finished (001–006)."

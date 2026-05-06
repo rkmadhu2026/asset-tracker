@@ -1,0 +1,72 @@
+Route File,Mount Path,Method,Endpoint,Auth,DB Table(s),Status,Notes / Open Issues
+auth.ts,/api/auth,POST,/login,None,users,Done,bcrypt compare password_hash; returns {token user}
+auth.ts,/api/auth,POST,/register,None,users,Done,bcrypt hash + INSERT; first user auto-promoted to admin if DB empty
+auth.ts,/api/auth,GET,/me,requireAuth,users,Done,Returns decoded JWT user info
+clients.ts,/api/clients,GET,/,requireAuth,clients,Done,Returns all clients ordered by created_at
+clients.ts,/api/clients,POST,/,requireAuth,clients,Done,INSERT with UUID slug
+clients.ts,/api/clients,PUT,/:id,requireAuth,clients,Done,UPDATE fields
+clients.ts,/api/clients,DELETE,/:id,requireAuth,clients,Done,DELETE by id
+clients.ts,/api/clients,GET,/:id,requireAuth,clients,Done,SELECT by id
+sites.ts,/api/sites,GET,/,requireAuth,sites_with_clients view,Done,Returns site + client_ids array via view
+sites.ts,/api/sites,POST,/,requireAuth,sites + site_clients,Done,INSERT site then client join rows
+sites.ts,/api/sites,PUT,/:id,requireAuth,sites + site_clients,Done,UPDATE site + replace client join rows
+sites.ts,/api/sites,DELETE,/:id,requireAuth,sites,Done,CASCADE deletes racks + infra
+sites.ts,/api/sites,GET,/:id,requireAuth,sites,Done,SELECT by id
+racks.ts,/api/racks,GET,/,requireAuth,racks,Done,All racks; optionally filter by site_id query param
+racks.ts,/api/racks,POST,/,requireAuth,racks,Done,INSERT
+racks.ts,/api/racks,PUT,/:id,requireAuth,racks,Done,UPDATE
+racks.ts,/api/racks,DELETE,/:id,requireAuth,racks,Done,DELETE
+racks.ts,/api/racks,GET,/:id,requireAuth,racks,Done,SELECT by id
+infrastructure.ts,/api/infrastructure,GET,/,requireAuth,infrastructure,Done,All devices with site JOIN; filter by site_id query param
+infrastructure.ts,/api/infrastructure,POST,/,requireAuth,infrastructure,Done,INSERT with all fields
+infrastructure.ts,/api/infrastructure,PUT,/:id,requireAuth,infrastructure,Done,UPDATE — partial update supported
+infrastructure.ts,/api/infrastructure,DELETE,/:id,requireAuth,infrastructure,Done,DELETE by id
+infrastructure.ts,/api/infrastructure,GET,/:id,requireAuth,infrastructure,Done,SELECT by id with site join
+infrastructure.ts,/api/infrastructure,POST,/:id/documents,requireAuth,device_documents,Done,Attach document record to device
+infrastructure.ts,/api/infrastructure,DELETE,/:id/documents/:docId,requireAuth,device_documents,Done,Remove document
+assets.ts,/api/assets,GET,/,requireAuth,assets,Done,All assets; filter by client_id / site_id / status query params
+assets.ts,/api/assets,POST,/,requireAuth,assets,Done,INSERT
+assets.ts,/api/assets,GET,/stats,requireAuth,assets,Done,Returns counts by status (aggregate query)
+assets.ts,/api/assets,GET,/:id,requireAuth,assets,Done,SELECT by id
+assets.ts,/api/assets,PUT,/:id,requireAuth,assets,Done,Full UPDATE
+assets.ts,/api/assets,PATCH,/:id,requireAuth,assets,Done,Partial UPDATE (status / tags)
+assets.ts,/api/assets,DELETE,/:id,requireAuth,assets,Done,DELETE
+assets.ts,/api/assets,POST,/bulk,requireAuth,assets,Done,Bulk status update by ids array
+assets.ts,/api/assets,DELETE,/bulk,requireAuth,assets,Done,Bulk delete by ids array
+assets.ts,/api/assets,POST,/:id/documents,requireAuth,asset_documents,Done,Attach document
+assets.ts,/api/assets,DELETE,/:id/documents/:docId,requireAuth,asset_documents,Done,Remove document
+assets.ts,/api/assets,GET,/:id/documents,requireAuth,asset_documents,Done,List documents for asset
+config-tasks.ts,/api/config-tasks,GET,/,requireAuth,configuration_tasks,Done,All tasks; optionally filter by device_id
+config-tasks.ts,/api/config-tasks,POST,/,requireAuth,configuration_tasks,Done,INSERT task
+config-tasks.ts,/api/config-tasks,PUT,/:id,requireAuth,configuration_tasks,Done,UPDATE task (status / assignee / etc.)
+config-tasks.ts,/api/config-tasks,DELETE,/:id,requireAuth,configuration_tasks,Done,DELETE task
+device-templates.ts,/api/device-templates,GET,/,requireAuth,device_templates,Done,All templates
+device-templates.ts,/api/device-templates,POST,/,requireAuth,device_templates,Done,INSERT
+device-templates.ts,/api/device-templates,DELETE,/:id,requireAuth,device_templates,Done,DELETE
+drifts.ts,/api/drifts,GET,/,requireAuth,drifts,Done,All drifts; filter by device_id query param
+drifts.ts,/api/drifts,POST,/,requireAuth,drifts,Done,Insert drift record
+drifts.ts,/api/drifts,PATCH,/:id,requireAuth,drifts,Done,Update status (Open / Resolved / Ignored)
+validation-history.ts,/api/validation-history,GET,/,requireAuth,validation_history,Done,All records; filter by device_id
+validation-history.ts,/api/validation-history,POST,/,requireAuth,validation_history,Done,Insert validation result
+users.ts,/api/users,GET,/,requireAdmin,users,Done,All users list
+users.ts,/api/users,PUT,/:uid/role,requireAdmin,users,Done,Update user role
+users.ts,/api/users,DELETE,/:uid,requireAdmin,users,Done,Delete user
+chats.ts,/api/chats,GET,/,requireAuth,chats,Done,Fetch messages for authed user (ordered by timestamp)
+chats.ts,/api/chats,POST,/,requireAuth,chats,Done,Insert chat message (role: user|assistant)
+upload.ts,/api/upload,POST,/,requireAuth,—,Done,Multer; saves to /uploads/; returns public URL
+—,/api/health,GET,/,None,—,Done,Returns {status ok ts}
+MISSING,/api/audit-logs,GET,/,requireAdmin,audit_logs,Missing,Table exists (001_initial.sql) but NO route — AuditLog.tsx uses hardcoded data (FR-020)
+MISSING,/api/audit-logs,POST,/,Internal,audit_logs,Missing,Need helper to write audit events from every mutating route (FR-020)
+MISSING,/api/monitoring,GET,/metrics,requireAuth,—,Missing,No poller — fakeLatency/fakeUptime in frontend (FR-019); need ICMP/SNMP worker + metrics store
+MISSING,/api/monitoring,GET,/stream (SSE),requireAuth,—,Missing,SSE push for live device state (FR-024); no EventSource endpoint exists
+MISSING,/api/automation,GET,/scripts,requireAuth,automation_scripts,Missing,Table not created; Automation.tsx fully hardcoded (FR-021)
+MISSING,/api/automation,POST,/scripts,requireAdmin,automation_scripts,Missing,
+MISSING,/api/automation,POST,/scripts/:id/run,requireAdmin,automation_runs,Missing,
+MISSING,/api/automation,GET,/runs,requireAuth,automation_runs,Missing,
+MISSING,/api/auth,POST,/forgot-password,None,users,Missing,No reset token table or email service (FR-031)
+MISSING,/api/auth,POST,/reset-password,None,users,Missing,
+MISSING,/api/users,POST,/invite,requireAdmin,users,Missing,Email invite flow (FR-032)
+DB Migration 006,—,—,—,—,audit_logs (add indexes),Planned,Composite index (resource_type resource_id) needed for fast lookup
+DB Migration 007,—,—,—,—,automation_scripts + automation_runs,Planned,New tables for FR-021
+DB Migration 008,—,—,—,—,monitoring_metrics,Planned,Time-series table or TimescaleDB extension for FR-019 / FR-025
+DB Migration 009,—,—,—,—,password_reset_tokens,Planned,For FR-031 forgot-password flow

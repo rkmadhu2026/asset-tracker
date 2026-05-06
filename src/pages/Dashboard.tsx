@@ -1,693 +1,858 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Server, Activity, AlertTriangle, ShieldCheck, CheckCircle2, XCircle, Globe, Shield, Router, Database as DatabaseIcon, Cpu, HardDrive, Zap, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
-import { ClipboardList } from 'lucide-react';
+import {
+  Server, Activity, AlertTriangle, ShieldCheck, Globe,
+  Shield, Router, Database as DatabaseIcon, Cpu, HardDrive, Zap,
+  ArrowUpRight, ArrowDownRight, CheckCircle2, Clock, User,
+  Settings, TrendingUp, BarChart3, Layers,
+} from 'lucide-react';
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
+  PieChart, Pie, Cell, AreaChart, Area, LineChart, Line,
+} from 'recharts';
 import { Link } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { assetsApi, driftsApi, infrastructureApi } from '../lib/api';
+import { assetsApi, driftsApi, infrastructureApi, auditLogsApi, type AuditLogRow } from '../lib/api';
 import { useClient } from '@/components/ClientProvider';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
-const recentLogs = [
-  { id: 'LOG-001', time: '2 mins ago', user: 'admin@acme.com', action: 'Config Backup', severity: 'Info' },
-  { id: 'LOG-002', time: '15 mins ago', user: 'system', action: 'Vuln Scan', severity: 'Warning' },
-  { id: 'LOG-003', time: '45 mins ago', user: 'j.doe@acme.com', action: 'User Login', severity: 'Info' },
-];
+/* ── Theme constants ─────────────────────────────────────────────────────── */
+const ACC     = '#C8622E';
+const ACC_BG  = '#FAE8DC';
+const TEXT    = '#19160F';
+const TEXT2   = '#3D3830';
+const TEXT3   = '#6B6458';
+const DIM     = '#A09688';
+const BDR     = '#E8E1D8';
+const SURF    = '#ffffff';
+const FONT_D  = "'Lora', Georgia, serif";
+const FONT_M  = "'JetBrains Mono', monospace";
 
-const riskData = [
-  { name: 'Low', count: 120, fill: '#22c55e' },
-  { name: 'Medium', count: 45, fill: '#eab308' },
-  { name: 'High', count: 12, fill: '#f97316' },
-  { name: 'Critical', count: 3, fill: '#ef4444' },
-];
-
+/* ── Static stub data ────────────────────────────────────────────────────── */
 const complianceData = [
-  { name: 'CIS', score: 92 },
-  { name: 'SOX', score: 85 },
-  { name: 'HIPAA', score: 98 },
+  { name: 'CIS',   score: 92, color: '#3D9970' },
+  { name: 'SOX',   score: 85, color: '#C8622E' },
+  { name: 'HIPAA', score: 98, color: '#276749' },
 ];
 
-const vendorData = [
-  { name: 'Cisco', count: 450, fill: '#0043ce', models: ['C9300X 24HX', 'Nexus 9000', 'ISR 4321', 'FTD 2130'] },
-  { name: 'Aruba', count: 280, fill: '#ff8300', models: ['2930F 24G', '6300M', '7210'] },
-  { name: 'Arista', count: 180, fill: '#00a3e0', models: ['7050X3', '7124sx', '7280R3'] },
-  { name: 'HP', count: 150, fill: '#00b388', models: ['ProLiant DL380', 'SN3600B FC', 'DL360'] },
-  { name: 'Dell', count: 120, fill: '#007db8', models: ['PowerEdge R740', 's5248F', 'R640'] },
-  { name: 'Huawei', count: 68, fill: '#ed1c24', models: ['S6720S', 'S5735 L24T', 'OceanStor'] },
-  { name: 'Fortinet', count: 95, fill: '#ee3124', models: ['FG 100F', 'FG 60F', 'FG 200F'] },
+const networkPerformanceData = [
+  { time: '00:00', throughput: 45, latency: 12 },
+  { time: '04:00', throughput: 32, latency: 15 },
+  { time: '08:00', throughput: 78, latency: 22 },
+  { time: '12:00', throughput: 95, latency: 25 },
+  { time: '16:00', throughput: 82, latency: 18 },
+  { time: '20:00', throughput: 55, latency: 14 },
 ];
 
+const computeUtilizationData = [
+  { time: '00:00', cpu: 25, mem: 45 },
+  { time: '04:00', cpu: 18, mem: 42 },
+  { time: '08:00', cpu: 65, mem: 78 },
+  { time: '12:00', cpu: 88, mem: 92 },
+  { time: '16:00', cpu: 72, mem: 85 },
+  { time: '20:00', cpu: 45, mem: 60 },
+];
+
+const VENDOR_COLORS: Record<string, string> = {
+  Cisco: '#1D4ED8', Aruba: '#EA580C', Arista: '#0284C7', HP: '#059669',
+  Dell: '#2563EB', Huawei: '#DC2626', Fortinet: '#D97706',
+  Canonical: '#7C3AED', Microsoft: '#0369A1', 'Red Hat': '#B91C1C',
+};
+
+const TYPE_COLORS: Record<string, string> = {
+  Firewalls: '#DC2626', Routers: '#2563EB', 'Servers & VMs': '#16A34A',
+  Switches: '#7C3AED', Storage: '#D97706', Power: '#0891B2', Other: '#DB2777',
+};
+
+/* ── Dark warm chart tooltip ─────────────────────────────────────────────── */
+const WarmTooltip = {
+  contentStyle: {
+    backgroundColor: '#1E1B13',
+    border: `1px solid rgba(200,98,46,0.35)`,
+    borderRadius: '10px',
+    fontSize: 12,
+    color: '#F7F3ED',
+    boxShadow: '0 8px 28px rgba(0,0,0,0.25)',
+    fontFamily: FONT_M,
+  },
+  labelStyle:  { color: DIM, marginBottom: 4 },
+  itemStyle:   { color: '#E07850' },
+  cursor: { fill: 'rgba(200,98,46,0.06)' },
+};
+
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+function typeIcon(t: string) {
+  if (t === 'User')   return <User className="w-3.5 h-3.5 text-blue-500" />;
+  if (t === 'Config') return <Settings className="w-3.5 h-3.5" style={{ color: ACC }} />;
+  return <Activity className="w-3.5 h-3.5 text-emerald-500" />;
+}
+
+function severityColor(s: string) {
+  if (s === 'Critical') return '#DC2626';
+  if (s === 'Warning')  return '#D97706';
+  return '#16A34A';
+}
+
+/* ── Section header ──────────────────────────────────────────────────────── */
+function SectionHeader({ title, desc, action }: { title: string; desc?: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex items-end justify-between gap-4 mb-4">
+      <div>
+        <h2 className="text-[15px] font-semibold leading-none" style={{ fontFamily: FONT_D, color: TEXT }}>
+          {title}
+        </h2>
+        {desc && <p className="mt-1 text-[12px]" style={{ color: TEXT3 }}>{desc}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+/* ── Stat card ───────────────────────────────────────────────────────────── */
+interface StatCardProps {
+  label: string;
+  value: string | number;
+  icon: React.ElementType;
+  accentColor: string;
+  trend?: 'up' | 'down' | 'neutral';
+  trendLabel?: string;
+}
+
+function StatCard({ label, value, icon: Icon, accentColor, trend, trendLabel }: StatCardProps) {
+  return (
+    <div
+      className="relative overflow-hidden rounded-xl p-5 transition-shadow"
+      style={{
+        background: SURF,
+        border: `1px solid ${BDR}`,
+        boxShadow: '0 1px 4px rgba(41,37,36,0.07), 0 4px 16px -8px rgba(41,37,36,0.05)',
+        borderLeft: `3px solid ${accentColor}`,
+      }}
+    >
+      {/* Background watermark */}
+      <Icon
+        className="pointer-events-none absolute -right-2 -bottom-2 h-20 w-20"
+        style={{ color: accentColor, opacity: 0.04 }}
+      />
+
+      <div className="flex items-start justify-between mb-3">
+        <p className="text-[10.5px] font-bold uppercase tracking-[0.13em]" style={{ color: TEXT3 }}>
+          {label}
+        </p>
+        <div
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+          style={{ background: `${accentColor}18` }}
+        >
+          <Icon className="h-4 w-4" style={{ color: accentColor }} strokeWidth={1.75} />
+        </div>
+      </div>
+
+      <p
+        className="text-[2.15rem] font-semibold leading-none tracking-tight"
+        style={{ fontFamily: FONT_D, color: TEXT }}
+      >
+        {value}
+      </p>
+
+      {(trend || trendLabel) && (
+        <div className="flex items-center gap-1.5 mt-2.5">
+          {trend === 'up'   && <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
+          {trend === 'down' && <ArrowDownRight className="h-3.5 w-3.5 text-red-500 shrink-0" />}
+          <span
+            className="text-[11px] font-medium"
+            style={{ color: trend === 'up' ? '#16A34A' : trend === 'down' ? '#DC2626' : TEXT3 }}
+          >
+            {trendLabel}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Kicker label (IntelliRAG style) ─────────────────────────────────────── */
+function Kicker({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      <span className="h-[1.5px] w-4 rounded-full" style={{ background: ACC }} />
+      <span className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: ACC }}>
+        {children}
+      </span>
+    </div>
+  );
+}
+
+/* ── Main Dashboard ──────────────────────────────────────────────────────── */
 export function Dashboard() {
-  const [drifts, setDrifts] = useState<any[]>([]);
+  const [drifts,      setDrifts]      = useState<any[]>([]);
   const [assetsCount, setAssetsCount] = useState(0);
-  const [devices, setDevices] = useState<any[]>([]);
-  const [activeDashboardTab, setActiveDashboardTab] = useState('overview');
+  const [devices,     setDevices]     = useState<any[]>([]);
+  const [auditLogs,   setAuditLogs]   = useState<AuditLogRow[]>([]);
+  const [tab,         setTab]         = useState('overview');
   const { selectedClientId } = useClient();
 
   useEffect(() => {
-    assetsApi.list(selectedClientId ? { clientId: selectedClientId } : {})
-      .then(rows => setAssetsCount(rows.length))
-      .catch(console.error);
-    driftsApi.list({ status: 'Open' })
-      .then(setDrifts)
-      .catch(console.error);
-    infrastructureApi.list(selectedClientId ? { clientId: selectedClientId } : {})
-      .then(setDevices)
-      .catch(console.error);
+    const params = selectedClientId ? { clientId: selectedClientId } : {};
+    assetsApi.list(params).then(rows => setAssetsCount(rows.length)).catch(console.error);
+    driftsApi.list({ status: 'Open' }).then(setDrifts).catch(console.error);
+    infrastructureApi.list(params).then(setDevices).catch(console.error);
+    auditLogsApi.list({ limit: 6 }).then(setAuditLogs).catch(console.error);
   }, [selectedClientId]);
 
-  const cloudData = [
-    { name: 'AWS', instances: 45, cost: 12500, fill: '#ff9900' },
-    { name: 'Azure', instances: 32, cost: 8900, fill: '#0089d6' },
-    { name: 'GCP', instances: 18, cost: 4200, fill: '#4285f4' },
-  ];
-
-  const softwareData = [
-    { name: 'Microsoft 365', licenses: 1200, used: 1150, compliance: 96 },
-    { name: 'Adobe Creative Cloud', licenses: 150, used: 148, compliance: 98 },
-    { name: 'ServiceNow', licenses: 500, used: 480, compliance: 96 },
-    { name: 'Slack', licenses: 1200, used: 1180, compliance: 98 },
-  ];
-
-  const COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#8b5cf6', '#f59e0b', '#06b6d4', '#ec4899'];
-
-  // Real computed stats from loaded devices
   const typeCounts = devices.reduce((acc: Record<string, number>, d) => {
     acc[d.type] = (acc[d.type] || 0) + 1; return acc;
   }, {});
   const vendorCounts = devices.reduce((acc: Record<string, number>, d) => {
-    const v = d.vendor || 'Unknown';
-    acc[v] = (acc[v] || 0) + 1; return acc;
+    const v = d.vendor || 'Unknown'; acc[v] = (acc[v] || 0) + 1; return acc;
   }, {});
 
   const assetTypeData = [
-    { name: 'Firewalls', count: typeCounts['Firewall'] || 0, fill: '#ef4444' },
-    { name: 'Routers',   count: typeCounts['Router']   || 0, fill: '#3b82f6' },
-    { name: 'Servers',   count: (typeCounts['Server']  || 0) + (typeCounts['VM'] || 0), fill: '#22c55e' },
-    { name: 'Switches',  count: typeCounts['Switch']   || 0, fill: '#8b5cf6' },
-    { name: 'Storage',   count: typeCounts['Storage']  || 0, fill: '#f59e0b' },
-    { name: 'Power',     count: typeCounts['Power']    || 0, fill: '#06b6d4' },
-    { name: 'Other',     count: typeCounts['Device']   || 0, fill: '#ec4899' },
+    { name: 'Firewalls',    count: typeCounts['Firewall'] || 0 },
+    { name: 'Routers',      count: typeCounts['Router']   || 0 },
+    { name: 'Servers & VMs',count: (typeCounts['Server'] || 0) + (typeCounts['VM'] || 0) },
+    { name: 'Switches',     count: typeCounts['Switch']   || 0 },
+    { name: 'Storage',      count: typeCounts['Storage']  || 0 },
+    { name: 'Power',        count: typeCounts['Power']    || 0 },
+    { name: 'Other',        count: typeCounts['Device']   || 0 },
   ].filter(d => d.count > 0);
 
-  const VENDOR_COLORS: Record<string, string> = {
-    Cisco: '#0043ce', Aruba: '#ff8300', Arista: '#00a3e0', HP: '#00b388',
-    Dell: '#007db8', Huawei: '#ed1c24', Fortinet: '#ee3124', Canonical: '#e95420',
-    Microsoft: '#0078d4', 'Red Hat': '#cc0000',
-  };
   const liveVendorData = Object.entries(vendorCounts)
-    .filter(([v]) => v !== 'Unknown' && v !== '')
+    .filter(([v]) => v && v !== 'Unknown')
     .sort((a, b) => (b[1] as number) - (a[1] as number))
     .slice(0, 7)
     .map(([name, count]) => ({ name, count: count as number, fill: VENDOR_COLORS[name] || '#64748b' }));
 
-  const networkPerformanceData = [
-    { time: '00:00', throughput: 45, latency: 12 },
-    { time: '04:00', throughput: 32, latency: 15 },
-    { time: '08:00', throughput: 78, latency: 22 },
-    { time: '12:00', throughput: 95, latency: 25 },
-    { time: '16:00', throughput: 82, latency: 18 },
-    { time: '20:00', throughput: 55, latency: 14 },
-  ];
-
-  const computeUtilizationData = [
-    { time: '00:00', cpu: 25, mem: 45 },
-    { time: '04:00', cpu: 18, mem: 42 },
-    { time: '08:00', cpu: 65, mem: 78 },
-    { time: '12:00', cpu: 88, mem: 92 },
-    { time: '16:00', cpu: 72, mem: 85 },
-    { time: '20:00', cpu: 45, mem: 60 },
-  ];
+  const totalHardware = assetsCount + devices.length;
+  const activeVendors = Object.keys(vendorCounts).filter(v => v && v !== 'Unknown').length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-7">
+
+      {/* ── Page header ─────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Asset Management Executive Dashboard</h1>
-          <p className="text-muted-foreground">Comprehensive visibility across hardware, software, and cloud.</p>
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.13em] mb-1.5" style={{ color: ACC }}>
+            FinSpot · LinkedEye
+          </p>
+          <h1
+            className="text-[1.65rem] font-semibold leading-tight tracking-tight"
+            style={{ fontFamily: FONT_D, color: TEXT }}
+          >
+            Executive Dashboard
+          </h1>
+          <p className="text-[13px] mt-1" style={{ color: TEXT3 }}>
+            Real-time visibility across hardware, network, and compliance.
+          </p>
         </div>
-        <div className="flex space-x-2">
-          <Badge variant="outline" className="px-3 py-1">Last Sync: 2 mins ago</Badge>
-          <Badge variant="success" className="px-3 py-1">System Healthy</Badge>
+        <div className="flex items-center gap-2">
+          <div
+            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold"
+            style={{ background: '#D1FAE5', color: '#065F46', border: '1px solid #A7F3D0' }}
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            All Systems Healthy
+          </div>
+          <div
+            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold"
+            style={{ background: ACC_BG, color: ACC, border: `1px solid ${ACC}33` }}
+          >
+            <Clock className="h-3 w-3" />
+            Live
+          </div>
         </div>
       </div>
 
+      {/* ── Tabs ────────────────────────────────────────────────────── */}
       <Tabs className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
-          <TabsTrigger active={activeDashboardTab === 'overview'} onClick={() => setActiveDashboardTab('overview')}>Overview</TabsTrigger>
-          <TabsTrigger active={activeDashboardTab === 'network'} onClick={() => setActiveDashboardTab('network')}>Network</TabsTrigger>
-          <TabsTrigger active={activeDashboardTab === 'compute'} onClick={() => setActiveDashboardTab('compute')}>Compute</TabsTrigger>
+        <TabsList
+          className="h-auto gap-0 p-0 w-auto rounded-none"
+          style={{ background: 'transparent', borderBottom: `1px solid ${BDR}` }}
+        >
+          {[
+            { key: 'overview', label: 'Overview' },
+            { key: 'network',  label: 'Network' },
+            { key: 'compute',  label: 'Compute' },
+          ].map(t => (
+            <TabsTrigger
+              key={t.key}
+              active={tab === t.key}
+              onClick={() => setTab(t.key)}
+              className="h-9 px-5 rounded-none text-[13px] font-medium border-b-2 transition-all"
+              style={{
+                borderBottomColor: tab === t.key ? ACC : 'transparent',
+                color: tab === t.key ? ACC : TEXT3,
+                background: 'transparent',
+              }}
+            >
+              {t.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
-        <TabsContent className={activeDashboardTab === 'overview' ? 'block space-y-6' : 'hidden'}>
-          {/* Top Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Hardware Assets</CardTitle>
-            <Server className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{assetsCount + devices.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">{devices.length} infra · {assetsCount} CIs</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Software Licenses</CardTitle>
-            <ClipboardList className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">3,050</div>
-            <p className="text-xs text-muted-foreground mt-1">98% Utilization</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Cloud Spend (MTD)</CardTitle>
-            <Globe className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">$25,600</div>
-            <p className="text-xs text-muted-foreground mt-1">On track with budget</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Overall Compliance</CardTitle>
-            <ShieldCheck className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">94%</div>
-            <p className="text-xs text-muted-foreground mt-1">Across all technology</p>
-          </CardContent>
-        </Card>
-      </div>
+        {/* ═══════════════════════════════════════════════════════════
+            OVERVIEW TAB
+        ═══════════════════════════════════════════════════════════ */}
+        <TabsContent className={tab === 'overview' ? 'block space-y-7 mt-6' : 'hidden'}>
 
-      {/* Asset-Wise Breakdown */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Firewalls</CardTitle>
-            <Shield className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{typeCounts['Firewall'] || 0}</div>
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-xs text-muted-foreground">Security devices</span>
-              <Badge variant="success" className="text-[10px]">Active</Badge>
+          {/* KPI stat cards */}
+          <div>
+            <Kicker>Key Metrics</Kicker>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard
+                label="Total Hardware"
+                value={totalHardware}
+                icon={Server}
+                accentColor="#2563EB"
+                trend="up"
+                trendLabel={`${devices.length} infra · ${assetsCount} CIs`}
+              />
+              <StatCard
+                label="Open Drifts"
+                value={drifts.length}
+                icon={AlertTriangle}
+                accentColor={drifts.length > 0 ? '#D97706' : '#16A34A'}
+                trend={drifts.length > 0 ? 'down' : 'neutral'}
+                trendLabel={drifts.length > 0 ? 'Needs attention' : 'All clear'}
+              />
+              <StatCard
+                label="Compliance"
+                value="94%"
+                icon={ShieldCheck}
+                accentColor="#16A34A"
+                trend="up"
+                trendLabel="CIS · SOX · HIPAA"
+              />
+              <StatCard
+                label="Active Vendors"
+                value={activeVendors}
+                icon={BarChart3}
+                accentColor={ACC}
+                trendLabel={`${devices.length} total devices`}
+              />
             </div>
-            <Progress value={100} className="h-1 mt-2" indicatorClassName="bg-red-500" />
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Routers</CardTitle>
-            <Router className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{typeCounts['Router'] || 0}</div>
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-xs text-muted-foreground">Network routing</span>
-              <Badge variant="success" className="text-[10px]">Active</Badge>
-            </div>
-            <Progress value={100} className="h-1 mt-2" indicatorClassName="bg-blue-500" />
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Servers & VMs</CardTitle>
-            <DatabaseIcon className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{(typeCounts['Server'] || 0) + (typeCounts['VM'] || 0)}</div>
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-xs text-muted-foreground">{typeCounts['Server'] || 0} physical · {typeCounts['VM'] || 0} VMs</span>
-              <Badge variant="success" className="text-[10px]">Active</Badge>
-            </div>
-            <Progress value={100} className="h-1 mt-2" indicatorClassName="bg-green-500" />
-          </CardContent>
-        </Card>
-      </div>
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Asset Type Distribution</CardTitle>
-            <CardDescription>Breakdown of infrastructure assets by primary category.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px] flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={assetTypeData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="count"
-                >
-                  {assetTypeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="grid grid-cols-2 gap-4 ml-4">
-              {assetTypeData.map((item, index) => (
-                <div key={item.name} className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                  <span className="text-xs font-medium">{item.name} ({item.count})</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Critical Asset Status</CardTitle>
-            <CardDescription>Real-time health of core infrastructure.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <Shield className="w-5 h-5 text-red-500" />
-                <div>
-                  <p className="text-sm font-medium">Edge Firewalls</p>
-                  <p className="text-xs text-muted-foreground">2 Clusters</p>
-                </div>
-              </div>
-              <Badge variant="success">Online</Badge>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <Router className="w-5 h-5 text-blue-500" />
-                <div>
-                  <p className="text-sm font-medium">Core Routers</p>
-                  <p className="text-xs text-muted-foreground">4 Nodes</p>
-                </div>
-              </div>
-              <Badge variant="success">Online</Badge>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <DatabaseIcon className="w-5 h-5 text-green-500" />
-                <div>
-                  <p className="text-sm font-medium">Primary DB Cluster</p>
-                  <p className="text-xs text-muted-foreground">3 Nodes</p>
-                </div>
-              </div>
-              <Badge variant="warning">Degraded</Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Cloud & Software Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Cloud Technology Overview</CardTitle>
-            <CardDescription>Multi-cloud instance distribution and monthly spend.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={cloudData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} />
-                <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
-                <Bar dataKey="instances" name="Instances" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="cost" name="Monthly Cost ($)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Software Asset Compliance</CardTitle>
-            <CardDescription>License utilization and compliance across key applications.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {softwareData.map((item) => (
-              <div key={item.name} className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{item.name}</span>
-                  <span className="text-muted-foreground">{item.used} / {item.licenses} licenses</span>
-                </div>
-                <Progress value={item.compliance} className="h-2" indicatorClassName="bg-blue-500" />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Drift Alerts */}
-      {drifts.length > 0 && (
-        <Card className="border-yellow-500/50 bg-yellow-50/50">
-          <CardHeader>
-            <CardTitle className="text-yellow-800 flex items-center">
-              <AlertTriangle className="w-5 h-5 mr-2" />
-              Active Configuration Drifts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {drifts.map(drift => (
-                <div key={drift.id} className="flex justify-between items-center p-2 bg-white rounded border border-yellow-200">
-                  <span className="font-semibold">{drift.device_id}</span>
-                  <span className="text-xs text-muted-foreground">{new Date(drift.created_at).toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Innovative Model Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <Card className="lg:col-span-4 overflow-hidden border-slate-800">
-          <CardHeader className="bg-slate-900 text-white border-b border-slate-800">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <CardTitle className="text-xl font-bold flex items-center">
-                  <Cpu className="w-5 h-5 mr-2 text-blue-400" />
-                  Manufacturer & Model Intelligence
-                </CardTitle>
-                <CardDescription className="text-slate-400">Standardization metrics and model distribution across infrastructure.</CardDescription>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline" className="bg-slate-950 border-slate-700 text-slate-300">Total Manufacturers: {Object.keys(vendorCounts).filter(v => v !== 'Unknown' && v !== '').length}</Badge>
-                <Badge variant="outline" className="bg-slate-950 border-slate-700 text-green-400">Total Devices: {devices.length}</Badge>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-x divide-slate-800 border-b border-slate-800 bg-slate-950">
-              {liveVendorData.map((vendor) => (
-                <div key={vendor.name} className="p-6 hover:bg-slate-900/50 transition-colors group">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{vendor.name}</span>
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: vendor.fill }}></div>
-                  </div>
-                  <div className="text-3xl font-bold text-white mb-2">{vendor.count as number}</div>
-                  <div className="space-y-2">
-                    {devices.filter(d => d.vendor === vendor.name).slice(0, 4)
-                      .map((d, i) => (
-                        <div key={i} className="flex items-center justify-between text-[10px]">
-                          <span className="text-slate-500 truncate mr-2">{d.model || d.name}</span>
-                          <span className="text-slate-400 font-mono">{d.type}</span>
-                        </div>
-                      ))
-                    }
-                  </div>
-                  <div className="mt-4 pt-4 border-t border-slate-800 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="sm" className="w-full text-[10px] h-7 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10">
-                      Deep Dive
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Vendor Distribution */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Vendor Distribution</CardTitle>
-            <CardDescription>Infrastructure breakdown by manufacturer.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={liveVendorData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e5e7eb" />
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} fontSize={12} />
-                <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
-                <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={20} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Risk Assessment */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Asset Risk Distribution</CardTitle>
-            <CardDescription>Dynamic risk score based on status, warranty, load, and age.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={riskData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} />
-                <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Recent Audit Logs */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Recent Audit Logs</CardTitle>
-              <ClipboardList className="w-4 h-4 text-muted-foreground" />
-            </div>
-            <CardDescription>Latest system and user activities.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {recentLogs.map((log) => (
-              <div key={log.id} className="flex items-start justify-between border-b pb-3 last:border-0 last:pb-0">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">{log.action}</p>
-                  <p className="text-xs text-muted-foreground">{log.user} • {log.time}</p>
-                </div>
-                <Badge variant={log.severity === 'Warning' ? 'warning' : 'secondary'} className="text-[10px]">
-                  {log.severity}
-                </Badge>
-              </div>
-            ))}
-            <Link 
-              to="/audit-log" 
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-8 w-full mt-2"
+          {/* Drift alert banner */}
+          {drifts.length > 0 && (
+            <div
+              className="flex items-center justify-between gap-4 rounded-xl px-5 py-3.5"
+              style={{
+                background: '#FFFBEB',
+                border: `1px solid #FDE68A`,
+                borderLeft: `3px solid #D97706`,
+              }}
             >
-              View All Logs
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
-        {/* Compliance Status */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Regulatory Compliance</CardTitle>
-            <CardDescription>Continuous auditing against major frameworks.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {complianceData.map((item) => (
-              <div key={item.name} className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{item.name} Benchmark</span>
-                  <span className={item.score > 90 ? "text-green-500" : "text-yellow-500"}>{item.score}%</span>
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                <p className="text-sm font-medium" style={{ color: '#92400E' }}>
+                  {drifts.length} configuration {drifts.length === 1 ? 'drift' : 'drifts'} require attention
+                </p>
+                <div className="flex flex-wrap gap-1.5 ml-2">
+                  {drifts.slice(0, 4).map(d => (
+                    <span
+                      key={d.id}
+                      className="inline-flex items-center px-2 py-0.5 rounded text-[10.5px]"
+                      style={{ background: '#FEF3C7', border: '1px solid #FDE68A', color: '#92400E', fontFamily: FONT_M }}
+                    >
+                      {d.device_id}
+                    </span>
+                  ))}
+                  {drifts.length > 4 && <span className="text-[11px] text-amber-700">+{drifts.length - 4} more</span>}
                 </div>
-                <Progress 
-                  value={item.score} 
-                  className="h-2" 
-                  indicatorClassName={item.score > 90 ? "bg-green-500" : "bg-yellow-500"}
-                />
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+              <Link
+                to="/configs"
+                className="shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors"
+                style={{ background: '#FEF3C7', border: '1px solid #FDE68A', color: '#92400E' }}
+              >
+                Review <ArrowUpRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          )}
+
+          {/* Asset type + vendor distribution */}
+          <div>
+            <Kicker>Asset Distribution</Kicker>
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+              {/* Donut chart */}
+              <div
+                className="lg:col-span-3 rounded-xl p-5"
+                style={{ background: SURF, border: `1px solid ${BDR}`, boxShadow: '0 1px 4px rgba(41,37,36,0.07)' }}
+              >
+                <p className="text-[13px] font-semibold mb-0.5" style={{ fontFamily: FONT_D, color: TEXT }}>
+                  Asset Type Distribution
+                </p>
+                <p className="text-[11.5px] mb-4" style={{ color: TEXT3 }}>Breakdown by infrastructure category.</p>
+                {assetTypeData.length > 0 ? (
+                  <div className="flex items-center gap-4">
+                    <div className="h-52 flex-1 min-w-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={assetTypeData} cx="50%" cy="50%" innerRadius={58} outerRadius={82} paddingAngle={2} dataKey="count">
+                            {assetTypeData.map(entry => (
+                              <Cell key={entry.name} fill={TYPE_COLORS[entry.name] || '#64748b'} />
+                            ))}
+                          </Pie>
+                          <Tooltip {...WarmTooltip} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="shrink-0 space-y-2">
+                      {assetTypeData.map(item => (
+                        <div key={item.name} className="flex items-center gap-2.5">
+                          <span className="h-2.5 w-2.5 rounded shrink-0" style={{ background: TYPE_COLORS[item.name] || '#64748b' }} />
+                          <span className="text-[12px] whitespace-nowrap" style={{ color: TEXT3 }}>{item.name}</span>
+                          <span className="text-[12px] font-bold ml-auto pl-4" style={{ color: TEXT, fontFamily: FONT_M }}>{item.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-52 flex items-center justify-center text-sm" style={{ color: DIM }}>
+                    No devices loaded — start the server and run migrations.
+                  </div>
+                )}
+              </div>
+
+              {/* Vendor bar */}
+              <div
+                className="lg:col-span-2 rounded-xl p-5"
+                style={{ background: SURF, border: `1px solid ${BDR}`, boxShadow: '0 1px 4px rgba(41,37,36,0.07)' }}
+              >
+                <p className="text-[13px] font-semibold mb-0.5" style={{ fontFamily: FONT_D, color: TEXT }}>
+                  Vendor Distribution
+                </p>
+                <p className="text-[11.5px] mb-4" style={{ color: TEXT3 }}>Devices by manufacturer.</p>
+                <div className="h-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={liveVendorData} layout="vertical" margin={{ top: 0, right: 8, left: 40, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={BDR} />
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} fontSize={11} tick={{ fill: TEXT3 }} />
+                      <Tooltip {...WarmTooltip} />
+                      <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={12}>
+                        {liveVendorData.map(entry => (
+                          <Cell key={entry.name} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Manufacturer intelligence */}
+          {liveVendorData.length > 0 && (
+            <div>
+              <Kicker>Manufacturer Intelligence</Kicker>
+              <div
+                className="rounded-xl overflow-hidden"
+                style={{ border: `1px solid ${BDR}`, boxShadow: '0 1px 4px rgba(41,37,36,0.07)' }}
+              >
+                {/* Header row */}
+                <div
+                  className="flex items-center justify-between px-5 py-3.5"
+                  style={{ background: '#FDFAF7', borderBottom: `1px solid ${BDR}` }}
+                >
+                  <p className="text-[13px] font-semibold" style={{ fontFamily: FONT_D, color: TEXT }}>
+                    Top devices per manufacturer
+                  </p>
+                  <span
+                    className="text-[11px] font-medium px-2.5 py-1 rounded-full"
+                    style={{ background: ACC_BG, color: ACC }}
+                  >
+                    {liveVendorData.length} vendors · {devices.length} devices
+                  </span>
+                </div>
+                {/* Vendor cells */}
+                <div
+                  className="grid gap-px"
+                  style={{
+                    background: BDR,
+                    gridTemplateColumns: `repeat(${Math.min(liveVendorData.length, 6)}, 1fr)`,
+                  }}
+                >
+                  {liveVendorData.map(vendor => (
+                    <div
+                      key={vendor.name}
+                      className="p-4 transition-colors"
+                      style={{ background: SURF, borderLeft: `3px solid ${vendor.fill}` }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#FDFAF7')}
+                      onMouseLeave={e => (e.currentTarget.style.background = SURF)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[9.5px] font-bold uppercase tracking-wide" style={{ color: TEXT3 }}>
+                          {vendor.name}
+                        </span>
+                        <span className="h-2 w-2 rounded-full shrink-0" style={{ background: vendor.fill }} />
+                      </div>
+                      <p
+                        className="text-[1.85rem] font-semibold leading-none mb-2"
+                        style={{ fontFamily: FONT_D, color: TEXT }}
+                      >
+                        {vendor.count}
+                      </p>
+                      <div className="space-y-0.5">
+                        {devices.filter(d => d.vendor === vendor.name).slice(0, 3).map((d, i) => (
+                          <p key={i} className="text-[10px] truncate" style={{ color: DIM }}>
+                            {d.model || d.name || d.type}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Compliance + infrastructure quick stats */}
+          <div>
+            <Kicker>Compliance &amp; Infrastructure</Kicker>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+              {/* Compliance */}
+              <div
+                className="rounded-xl p-5"
+                style={{ background: SURF, border: `1px solid ${BDR}`, boxShadow: '0 1px 4px rgba(41,37,36,0.07)' }}
+              >
+                <p className="text-[13px] font-semibold mb-0.5" style={{ fontFamily: FONT_D, color: TEXT }}>
+                  Regulatory Compliance
+                </p>
+                <p className="text-[11.5px] mb-5" style={{ color: TEXT3 }}>
+                  Continuous auditing against major frameworks.
+                </p>
+                <div className="space-y-5">
+                  {complianceData.map(item => (
+                    <div key={item.name}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full shrink-0" style={{ background: item.color }} />
+                          <span className="text-[13px] font-medium" style={{ color: TEXT2 }}>{item.name} Benchmark</span>
+                        </div>
+                        <span
+                          className="text-[13px] font-bold"
+                          style={{ fontFamily: FONT_M, color: item.score > 90 ? '#16A34A' : '#D97706' }}
+                        >
+                          {item.score}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#F0EAE0' }}>
+                        <div
+                          className="h-full rounded-full transition-all duration-700"
+                          style={{ width: `${item.score}%`, background: item.color }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Device type quick stats */}
+              <div
+                className="rounded-xl p-5"
+                style={{ background: SURF, border: `1px solid ${BDR}`, boxShadow: '0 1px 4px rgba(41,37,36,0.07)' }}
+              >
+                <p className="text-[13px] font-semibold mb-0.5" style={{ fontFamily: FONT_D, color: TEXT }}>
+                  Infrastructure Quick Stats
+                </p>
+                <p className="text-[11.5px] mb-4" style={{ color: TEXT3 }}>Live device counts by type.</p>
+                <div className="space-y-2">
+                  {[
+                    { label: 'Firewalls', count: typeCounts['Firewall'] || 0, icon: Shield,      color: '#DC2626', bg: 'rgba(220,38,38,0.08)' },
+                    { label: 'Routers',   count: typeCounts['Router']   || 0, icon: Router,      color: '#2563EB', bg: 'rgba(37,99,235,0.08)' },
+                    { label: 'Switches',  count: typeCounts['Switch']   || 0, icon: Zap,         color: '#7C3AED', bg: 'rgba(124,58,237,0.08)' },
+                    { label: 'Servers',   count: (typeCounts['Server'] || 0) + (typeCounts['VM'] || 0), icon: DatabaseIcon, color: '#16A34A', bg: 'rgba(22,163,74,0.08)' },
+                    { label: 'Storage',   count: typeCounts['Storage']  || 0, icon: HardDrive,   color: '#D97706', bg: 'rgba(217,119,6,0.08)' },
+                  ].map(row => (
+                    <div
+                      key={row.label}
+                      className="flex items-center justify-between p-3 rounded-lg transition-colors"
+                      style={{ background: '#FDFAF7', border: `1px solid ${BDR}` }}
+                      onMouseEnter={e => (e.currentTarget.style.background = ACC_BG)}
+                      onMouseLeave={e => (e.currentTarget.style.background = '#FDFAF7')}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 rounded-lg" style={{ background: row.bg }}>
+                          <row.icon className="h-3.5 w-3.5" style={{ color: row.color }} strokeWidth={1.75} />
+                        </div>
+                        <span className="text-[13px] font-medium" style={{ color: TEXT2 }}>{row.label}</span>
+                      </div>
+                      <span className="text-[14px] font-bold" style={{ fontFamily: FONT_M, color: TEXT }}>
+                        {row.count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent audit activity */}
+          <div>
+            <Kicker>Audit Activity</Kicker>
+            <div
+              className="rounded-xl overflow-hidden"
+              style={{ background: SURF, border: `1px solid ${BDR}`, boxShadow: '0 1px 4px rgba(41,37,36,0.07)' }}
+            >
+              {/* Header */}
+              <div
+                className="flex items-center justify-between px-5 py-3.5"
+                style={{ background: '#FDFAF7', borderBottom: `1px solid ${BDR}` }}
+              >
+                <p className="text-[13px] font-semibold" style={{ fontFamily: FONT_D, color: TEXT }}>
+                  Recent Activity
+                </p>
+                <Link
+                  to="/audit-log"
+                  className="flex items-center gap-1 text-[12px] font-semibold transition-colors"
+                  style={{ color: ACC }}
+                >
+                  View all <ArrowUpRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+              {/* Rows */}
+              {auditLogs.length > 0 ? (
+                <div>
+                  {auditLogs.map((log, i) => (
+                    <div
+                      key={log.id}
+                      className="flex items-center justify-between px-5 py-3 gap-3 transition-colors"
+                      style={{ borderTop: i > 0 ? `1px solid ${BDR}` : 'none' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#FDFAF7')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg"
+                          style={{ background: '#F0EAE0' }}
+                        >
+                          {typeIcon(log.type)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium truncate" style={{ color: TEXT2 }}>
+                            {log.action}
+                          </p>
+                          <p className="text-[11px] mt-0.5" style={{ color: DIM }}>
+                            {log.user_email || 'System'} · {format(new Date(log.created_at), 'dd MMM, HH:mm')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span
+                          className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full"
+                          style={{
+                            background: `${severityColor(log.severity)}18`,
+                            color: severityColor(log.severity),
+                          }}
+                        >
+                          {log.severity}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10" style={{ color: DIM }}>
+                  <CheckCircle2 className="h-8 w-8 mb-2 opacity-40" />
+                  <p className="text-sm">No recent activity</p>
+                </div>
+              )}
+            </div>
+          </div>
         </TabsContent>
 
-        <TabsContent className={activeDashboardTab === 'network' ? 'block space-y-6' : 'hidden'}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="border-l-4 border-l-red-500">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Firewalls</CardTitle>
-                <Shield className="h-4 w-4 text-red-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{typeCounts['Firewall'] || 0}</div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-muted-foreground">Security perimeter</span>
-                  <Badge variant="success" className="text-[10px]">Active</Badge>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-blue-500">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Routers</CardTitle>
-                <Router className="h-4 w-4 text-blue-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{typeCounts['Router'] || 0}</div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-muted-foreground">Core routing</span>
-                  <Badge variant="success" className="text-[10px]">Active</Badge>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-purple-500">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Switches</CardTitle>
-                <Zap className="h-4 w-4 text-purple-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{typeCounts['Switch'] || 0}</div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-muted-foreground">Network switching</span>
-                  <Badge variant="success" className="text-[10px]">97% OK</Badge>
-                </div>
-              </CardContent>
-            </Card>
+        {/* ═══════════════════════════════════════════════════════════
+            NETWORK TAB
+        ═══════════════════════════════════════════════════════════ */}
+        <TabsContent className={tab === 'network' ? 'block space-y-7 mt-6' : 'hidden'}>
+          <div>
+            <Kicker>Network Devices</Kicker>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <StatCard label="Firewalls" value={typeCounts['Firewall'] || 0} icon={Shield}  accentColor="#DC2626" trendLabel="Security perimeter" />
+              <StatCard label="Routers"   value={typeCounts['Router']   || 0} icon={Router}  accentColor="#2563EB" trendLabel="Core routing" />
+              <StatCard label="Switches"  value={typeCounts['Switch']   || 0} icon={Zap}     accentColor="#7C3AED" trendLabel="Network fabric" />
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Network Throughput (Gbps)</CardTitle>
-                <CardDescription>Real-time traffic across core infrastructure.</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={networkPerformanceData}>
-                    <defs>
-                      <linearGradient id="colorThroughput" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="time" />
-                    <YAxis />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="throughput" stroke="#3b82f6" fillOpacity={1} fill="url(#colorThroughput)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          <div>
+            <Kicker>Performance &amp; Alerts</Kicker>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Network throughput chart */}
+              <div className="rounded-xl p-5" style={{ background: SURF, border: `1px solid ${BDR}`, boxShadow: '0 1px 4px rgba(41,37,36,0.07)' }}>
+                <p className="text-[13px] font-semibold mb-0.5" style={{ fontFamily: FONT_D, color: TEXT }}>
+                  Network Throughput (Gbps)
+                </p>
+                <p className="text-[11.5px] mb-4" style={{ color: TEXT3 }}>24-hour traffic trend across core infrastructure.</p>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={networkPerformanceData}>
+                      <defs>
+                        <linearGradient id="gradNet" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor={ACC} stopOpacity={0.18} />
+                          <stop offset="95%" stopColor={ACC} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={BDR} />
+                      <XAxis dataKey="time" axisLine={false} tickLine={false} fontSize={11} tick={{ fill: DIM }} />
+                      <YAxis axisLine={false} tickLine={false} fontSize={11} tick={{ fill: DIM }} />
+                      <Tooltip {...WarmTooltip} />
+                      <Area type="monotone" dataKey="throughput" stroke={ACC} strokeWidth={2} fill="url(#gradNet)" name="Throughput (Gbps)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Critical Network Alerts</CardTitle>
-                <CardDescription>Active issues requiring immediate attention.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 border rounded-lg bg-red-50 border-red-100">
-                  <div className="flex items-center space-x-3">
-                    <AlertTriangle className="w-5 h-5 text-red-600" />
-                    <div>
-                      <p className="text-sm font-medium text-red-900">BGP Session Down</p>
-                      <p className="text-xs text-red-700">Edge-Router-01 • Peer: 172.16.0.1</p>
-                    </div>
-                  </div>
-                  <Badge variant="destructive">Critical</Badge>
+              {/* Alerts */}
+              <div className="rounded-xl p-5" style={{ background: SURF, border: `1px solid ${BDR}`, boxShadow: '0 1px 4px rgba(41,37,36,0.07)' }}>
+                <p className="text-[13px] font-semibold mb-0.5" style={{ fontFamily: FONT_D, color: TEXT }}>
+                  Active Network Alerts
+                </p>
+                <p className="text-[11.5px] mb-4" style={{ color: TEXT3 }}>Issues requiring attention.</p>
+                <div className="space-y-3">
+                  {[
+                    {
+                      severity: 'Critical', color: '#DC2626', bg: 'rgba(220,38,38,0.06)', border: 'rgba(220,38,38,0.2)',
+                      icon: AlertTriangle, title: 'BGP Session Down', detail: 'Edge-Router-01 · Peer: 172.16.0.1',
+                    },
+                    {
+                      severity: 'Warning',  color: '#D97706', bg: 'rgba(217,119,6,0.06)', border: 'rgba(217,119,6,0.2)',
+                      icon: Activity,       title: 'High CPU Usage',   detail: 'Core-Switch-02 · 85% load',
+                    },
+                    {
+                      severity: 'OK',       color: '#16A34A', bg: 'rgba(22,163,74,0.06)', border: 'rgba(22,163,74,0.2)',
+                      icon: CheckCircle2,   title: 'All other links nominal', detail: 'Last checked: moments ago',
+                    },
+                  ].map(alert => {
+                    const Icon = alert.icon;
+                    return (
+                      <div
+                        key={alert.severity}
+                        className="flex items-start justify-between gap-3 rounded-lg px-4 py-3"
+                        style={{ background: alert.bg, border: `1px solid ${alert.border}` }}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <Icon className="h-4 w-4 mt-0.5 shrink-0" style={{ color: alert.color }} strokeWidth={1.75} />
+                          <div>
+                            <p className="text-[13px] font-medium" style={{ color: TEXT2 }}>{alert.title}</p>
+                            <p className="text-[11px] mt-0.5" style={{ color: DIM }}>{alert.detail}</p>
+                          </div>
+                        </div>
+                        <span
+                          className="text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                          style={{ background: `${alert.color}22`, color: alert.color }}
+                        >
+                          {alert.severity}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="flex items-center justify-between p-3 border rounded-lg bg-yellow-50 border-yellow-100">
-                  <div className="flex items-center space-x-3">
-                    <Activity className="w-5 h-5 text-yellow-600" />
-                    <div>
-                      <p className="text-sm font-medium text-yellow-900">High CPU Usage</p>
-                      <p className="text-xs text-yellow-700">Core-Switch-02 • 85% Load</p>
-                    </div>
-                  </div>
-                  <Badge variant="warning">Warning</Badge>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </TabsContent>
 
-        <TabsContent className={activeDashboardTab === 'compute' ? 'block space-y-6' : 'hidden'}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="border-l-4 border-l-green-500">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Servers</CardTitle>
-                <DatabaseIcon className="h-4 w-4 text-green-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{(typeCounts['Server'] || 0) + (typeCounts['VM'] || 0)}</div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-muted-foreground">Physical: {typeCounts['Server'] || 0} | VM: {typeCounts['VM'] || 0}</span>
-                  <Badge variant="success" className="text-[10px]">96% OK</Badge>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-orange-500">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Storage Arrays</CardTitle>
-                <HardDrive className="h-4 w-4 text-orange-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{typeCounts['Storage'] || 0}</div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-muted-foreground">Storage arrays</span>
-                  <Badge variant="success" className="text-[10px]">100% OK</Badge>
-                </div>
-              </CardContent>
-            </Card>
+        {/* ═══════════════════════════════════════════════════════════
+            COMPUTE TAB
+        ═══════════════════════════════════════════════════════════ */}
+        <TabsContent className={tab === 'compute' ? 'block space-y-7 mt-6' : 'hidden'}>
+          <div>
+            <Kicker>Compute Resources</Kicker>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <StatCard
+                label="Servers &amp; VMs"
+                value={(typeCounts['Server'] || 0) + (typeCounts['VM'] || 0)}
+                icon={DatabaseIcon}
+                accentColor="#16A34A"
+                trendLabel={`${typeCounts['Server'] || 0} physical · ${typeCounts['VM'] || 0} VMs`}
+              />
+              <StatCard
+                label="Storage Arrays"
+                value={typeCounts['Storage'] || 0}
+                icon={HardDrive}
+                accentColor="#D97706"
+                trend="up"
+                trendLabel="100% operational"
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Compute Utilization (%)</CardTitle>
-                <CardDescription>CPU and Memory trends across server fleet.</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={computeUtilizationData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="time" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="cpu" stroke="#22c55e" strokeWidth={2} name="CPU Load" />
-                    <Line type="monotone" dataKey="mem" stroke="#3b82f6" strokeWidth={2} name="Memory Usage" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          <div>
+            <Kicker>Utilization &amp; Load</Kicker>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Compute chart */}
+              <div className="rounded-xl p-5" style={{ background: SURF, border: `1px solid ${BDR}`, boxShadow: '0 1px 4px rgba(41,37,36,0.07)' }}>
+                <p className="text-[13px] font-semibold mb-0.5" style={{ fontFamily: FONT_D, color: TEXT }}>
+                  Compute Utilization (%)
+                </p>
+                <p className="text-[11.5px] mb-4" style={{ color: TEXT3 }}>CPU and Memory trends across the server fleet.</p>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={computeUtilizationData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={BDR} />
+                      <XAxis dataKey="time" axisLine={false} tickLine={false} fontSize={11} tick={{ fill: DIM }} />
+                      <YAxis axisLine={false} tickLine={false} fontSize={11} tick={{ fill: DIM }} />
+                      <Tooltip {...WarmTooltip} />
+                      <Line type="monotone" dataKey="cpu" stroke="#16A34A" strokeWidth={2} name="CPU" dot={false} />
+                      <Line type="monotone" dataKey="mem" stroke="#2563EB" strokeWidth={2} name="Memory" dot={false} strokeDasharray="4 2" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-[#16A34A] inline-block" /><span className="text-[11px]" style={{ color: DIM }}>CPU</span></div>
+                  <div className="flex items-center gap-1.5"><span className="h-2 w-4 rounded-full bg-[#2563EB] inline-block" /><span className="text-[11px]" style={{ color: DIM }}>Memory</span></div>
+                </div>
+              </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Servers by Load</CardTitle>
-                <CardDescription>Identifying potential performance bottlenecks.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {[
-                  { name: 'PROD-DB-01', cpu: 92, mem: 88 },
-                  { name: 'WEB-FE-04', cpu: 78, mem: 65 },
-                  { name: 'APP-SRV-02', cpu: 65, mem: 72 },
-                ].map((srv) => (
-                  <div key={srv.name} className="space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium">{srv.name}</span>
-                      <span className="text-muted-foreground">CPU: {srv.cpu}% | MEM: {srv.mem}%</span>
-                    </div>
-                    <Progress value={srv.cpu} className="h-1.5" indicatorClassName={srv.cpu > 80 ? "bg-red-500" : "bg-green-500"} />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+              {/* Top servers */}
+              <div className="rounded-xl p-5" style={{ background: SURF, border: `1px solid ${BDR}`, boxShadow: '0 1px 4px rgba(41,37,36,0.07)' }}>
+                <p className="text-[13px] font-semibold mb-0.5" style={{ fontFamily: FONT_D, color: TEXT }}>
+                  Top Servers by Load
+                </p>
+                <p className="text-[11.5px] mb-4" style={{ color: TEXT3 }}>Potential performance bottlenecks.</p>
+                <div className="space-y-5">
+                  {[
+                    { name: 'PROD-DB-01', cpu: 92, mem: 88 },
+                    { name: 'WEB-FE-04',  cpu: 78, mem: 65 },
+                    { name: 'APP-SRV-02', cpu: 65, mem: 72 },
+                  ].map(srv => {
+                    const cpuColor = srv.cpu > 85 ? '#DC2626' : srv.cpu > 70 ? '#D97706' : '#16A34A';
+                    const memColor = srv.mem > 85 ? '#DC2626' : '#2563EB';
+                    return (
+                      <div key={srv.name}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[12.5px] font-semibold" style={{ fontFamily: FONT_M, color: TEXT2 }}>
+                            {srv.name}
+                          </span>
+                          <span className="text-[11px]" style={{ color: DIM }}>
+                            CPU {srv.cpu}% · MEM {srv.mem}%
+                          </span>
+                        </div>
+                        <div className="space-y-1.5">
+                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#F0EAE0' }}>
+                            <div className="h-full rounded-full transition-all" style={{ width: `${srv.cpu}%`, background: cpuColor }} />
+                          </div>
+                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#F0EAE0' }}>
+                            <div className="h-full rounded-full transition-all" style={{ width: `${srv.mem}%`, background: memColor }} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[10.5px] mt-4" style={{ color: DIM }}>
+                  Top bar = CPU · Bottom bar = Memory. Red = critical (&gt;85%), amber = warning (&gt;70%).
+                </p>
+              </div>
+            </div>
           </div>
         </TabsContent>
       </Tabs>

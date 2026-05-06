@@ -1,0 +1,24 @@
+Page/Component,File Path,Lines,Route,Auth Guard,Data Source,Status,Real Data?,Mock/Stub Risk,Open Issues / Next Actions
+Login,src/pages/Login.tsx,342,/login (implicit),None,POST /api/auth/login + /register,Done,Yes,None,No forgot-password flow — FR-031
+Dashboard,src/pages/Dashboard.tsx,696,/,requireAuth,GET /api/clients + /sites + /infrastructure + /assets,Done,Yes,None,KPI counts real; chart data may need time-series endpoint
+Assets,src/pages/Assets.tsx,1836,/assets + /assets/:id,requireAuth,assetsApi (12 endpoints),Done,Yes,None,Bulk ops (bulk update status / bulk delete) wired; very large file — split if adding features
+Infrastructure,src/pages/Infrastructure.tsx,2801,/infrastructure,requireAuth,infrastructureApi (7 endpoints),Done,Yes,None,Add Device form uses uncontrolled inputs — should be controlled; 2.8K lines — split modal into component
+Racks,src/pages/Racks.tsx,810,/racks,requireAuth,racksApi (5 endpoints),Done,Yes,None,Rack U-position visualizer present; wire to real rack layout data
+Clients,src/pages/Clients.tsx,297,/clients,requireAuth,clientsApi (5 endpoints),Done,Yes,None,Parent/sub-client hierarchy shown; add create-client inline form
+Sites,src/pages/Sites.tsx,356,/sites,requireAuth,sitesApi (5 endpoints),Done,Yes,None,many-to-many client_sites join handled; add site-map/geo view later
+Configurations,src/pages/Configurations.tsx,408,/configs,requireAuth,configTasksApi + infrastructureApi,Done,Yes,None,Config backup textarea wired to infra config column; drift tab reads real drifts
+Topology,src/pages/Topology.tsx,335,/topology,requireAuth,infrastructureApi (derives nodes),Done,Yes,None,Physical + logical layout modes; edges inferred from subnet — add real link/connection model
+Monitoring,src/pages/Monitoring.tsx,308,/monitoring,requireAuth,infrastructureApi (device list only),Stub,Partial,HIGH — fakeLatency() + fakeUptime() generate fake metrics,Wire to real ICMP/SNMP poller (FR-019 / FR-025); SSE for live status (FR-024)
+AuditLog,src/pages/AuditLog.tsx,120,/audit-log,requireAuth,Hardcoded array (7 entries),Stub,No,CRITICAL — all data is static const,Create GET /api/audit-logs route; write to audit_logs table on every mutating API call
+Automation,src/pages/Automation.tsx,167,/automation,requireAuth,Hardcoded scripts + build history arrays,Stub,No,CRITICAL — no DB or API,Create automation_scripts + automation_runs tables; build /api/automation route (FR-021)
+Onboarding,src/pages/Onboarding.tsx,201,/onboarding,requireAuth,None — setTimeout simulation,Stub,No,HIGH — processing is fake,Wire device onboarding to POST /api/infrastructure; template selection to /api/device-templates (FR-022)
+Users,src/pages/Users.tsx,166,/users,requireAdmin,usersApi (3 endpoints),Done,Yes,None,Role edit works; add invite-user button (FR-032)
+AuthProvider,src/components/AuthProvider.tsx,—,Global,—,GET /api/auth/me + localStorage JWT,Done,Yes,None,Admin hardcoded by email — move to DB role check only after Keycloak SSO (FR-023)
+ClientProvider,src/components/ClientProvider.tsx,—,Global,—,GET /api/clients (polls 30s),Done,Yes,None,Client family filtering works; consider pushing selection to URL param
+SiteProvider,src/components/SiteProvider.tsx,—,Global,—,GET /api/sites (filtered by client family),Done,Yes,None,OK
+Layout,src/components/Layout.tsx,—,Wrapper,—,Static navItems array,Done,Yes,None,Adding a page requires editing both App.tsx and Layout.tsx — consider generating from route config
+NetworkAI,src/components/NetworkAI.tsx,—,Global overlay,requireAuth,Gemini API + POST /api/chats,Done,Yes,None,Chat history stored in chats table; revoke blob URLs on unmount
+ErrorBoundary,src/components/ErrorBoundary.tsx,—,Global,—,None,Done,N/A,None,OK
+DeviceTemplates,src/components/DeviceTemplates.tsx,—,Modal/Component,—,deviceTemplatesApi,Done,Yes,None,Used within Infrastructure page
+ConfigurationManager,src/components/ConfigurationManager.tsx,—,Modal/Component,—,configTasksApi,Done,Yes,None,Used within Configurations page
+api.ts (client),src/lib/api.ts,—,—,—,All API objects + request() with JWT,Done,Yes,None,Single source of fetch calls; add response interceptor for 401 → auto logout

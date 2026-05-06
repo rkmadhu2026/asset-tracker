@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { FileCode2, History, Search, GitCommit, ArrowRightLeft, Sparkles, Loader2 } from 'lucide-react';
 import { validateConfig } from '@/services/gemini';
 import { detectDrift } from '@/services/driftService';
-import { auth } from '../firebase';
+import { useAuth } from '@/components/AuthProvider';
 import { configTasksApi, driftsApi, validationHistoryApi } from '../lib/api';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -60,6 +60,8 @@ export function Configurations() {
   const [activeTab, setActiveTab] = useState('diff');
   const { selectedClientId } = useClient();
 
+  const { user } = useAuth();
+
   useEffect(() => {
     configTasksApi.list().then(setTasks).catch(console.error);
   }, [selectedClientId]);
@@ -107,7 +109,7 @@ export function Configurations() {
     // Detect drift
     await detectDrift('Core-Router-01', config);
     
-    if (auth.currentUser) {
+    if (user) {
       await validationHistoryApi.create({ result: finalResult, details: { config } });
     }
 
@@ -130,7 +132,7 @@ export function Configurations() {
     const finalResult = result || "No issues found.";
     setValidationResult(finalResult);
     
-    if (auth.currentUser) {
+    if (user) {
       await validationHistoryApi.create({ result: finalResult, details: { config } });
     }
 

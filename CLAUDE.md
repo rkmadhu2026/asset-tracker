@@ -6,61 +6,167 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm install          # install dependencies
-npm run dev          # vite dev server on 0.0.0.0:3000
-npm run build        # production build (vite build → dist/)
-npm run preview      # preview the production build
-npm run lint         # type-check only — runs `tsc --noEmit`
+
+# ── Frontend ─────────────────────────────────────────────────────────────────
+npm run dev          # Vite dev server on 0.0.0.0:3000 (proxies /api → localhost:4000)
+npm run build        # production build → dist/
+npm run preview      # preview production build
+npm run lint         # TypeScript type-check only (tsc --noEmit); no ESLint/Prettier
 npm run clean        # remove dist/
+
+# ── Backend (Express + PostgreSQL) ───────────────────────────────────────────
+npm run server       # tsx watch server/index.ts (hot-reloads on :4000)
+npm run server:start # tsx server/index.ts (no watch)
+
+# ── Database ─────────────────────────────────────────────────────────────────
+npm run db:up        # docker compose up -d  (starts Postgres container)
+npm run db:down      # docker compose down
+npm run db:migrate   # run all six SQL migrations (001→006) against local Postgres
+
+# ── Docker full-stack ─────────────────────────────────────────────────────────
+npm run compose:prod:up   # build + start full stack (web + api + db) in prod mode
+
+# ── Data import scripts ───────────────────────────────────────────────────────
+npm run import:tenants          # node scripts/import-tenants.mjs
+npm run migrate:clients-sites   # node scripts/migrate-tenants-to-clients-sites.mjs
+node scripts/import-from-excel.mjs <file.xlsx>
+node scripts/import-racks.mjs   <file.xlsx>
 ```
 
-There is no test framework configured. `lint` is purely TypeScript type-checking; there is no ESLint/Prettier setup.
+**No test framework configured. No tests exist.**
 
 To disable Vite HMR (used by AI Studio to prevent flicker during agent edits), set `DISABLE_HMR=true` before `npm run dev`.
 
 ## Environment
 
-Required at runtime (read by `vite.config.ts` from the project root, not `src/`):
+Copy `.env.example` to `.env.local` (loaded by both Vite and the Express server via `dotenv`).
 
-- `GEMINI_API_KEY` — injected into client code as `process.env.GEMINI_API_KEY` via Vite's `define`. Used by `src/services/gemini.ts`. AI Studio injects this automatically; locally, put it in `.env.local`.
-- `APP_URL` — present in `.env.example` for AI Studio's Cloud Run URL injection; not currently consumed by client code.
+| Variable | Used by | Purpose |
+|---|---|---|
+| `GEMINI_API_KEY` | Vite (inlined at build) | Gemini AI assistant |
+| `JWT_SECRET` | Express | Secret key for signing JWT tokens (set a strong value in production!) |
+| `API_PORT` | Vite proxy + Express | Express listen port (default `4000`) |
+| `DATABASE_URL` | Express | Full Postgres URL — overrides `PG_*` when set |
+| `PG_HOST / PG_PORT / PG_DATABASE / PG_USER / PG_PASSWORD` | Express | Individual Postgres params (defaults: `argus`/`argus`) |
+| `CORS_ORIGIN` | Express | Allowed BROWSER origin (default `http://localhost:3001`); comma-separated for multiple |
+| `AUTH_BYPASS` | Express + Vite | `true` → skip JWT verification, treat all callers as admin. **Never in production.** |
 
-Firebase config is **not** in env vars — it is committed at `firebase-applet-config.json` and imported directly by `src/firebase.ts`. Note the non-default Firestore database ID (`firestoreDatabaseId` field) — `getFirestore(app, firebaseConfig.firestoreDatabaseId)` is required; calling `getFirestore(app)` will silently hit the wrong DB.
+The `docker-compose.yml` dev DB only auto-applies migrations 001–003 via `docker-entrypoint-initdb.d`. Always run `npm run db:migrate` after `npm run db:up` to get migrations 004–006.
 
 ## Architecture
 
-This is the **Argus-asset-tracker** applet (per `metadata.json`; renamed from "Linkedeye-Finspot") — a multi-tenant on-prem asset inventory + configuration management platform tracking infrastructure, network devices, and operators, with a Gemini AI assistant. Stack: React 19 + Vite 6 + TypeScript + Tailwind v4 + Firebase + `@google/genai`. (The `package.json` `name` field still says `react-example` — that's the AI Studio scaffold name, not the product.)
+**Argus-asset-tracker** — a multi-tenant on-prem CMDB/asset-inventory platform for financial institutions. Stack: React 19 + Vite 6 + TypeScript + Tailwind v4 (frontend) and Express + PostgreSQL (backend).
 
-### Provider stack (top-down)
-`main.tsx` → `App` → `ErrorBoundary` → `BrowserRouter` → `AuthProvider` → `TenantProvider` → `AppContent`
+### Data layer
 
-`AppContent` short-circuits to `<Login />` when there's no authenticated user; otherwise renders the routed `Layout` plus a global `<NetworkAI />` overlay (the Gemini chat assistant is mounted at the app root, not per-route).
+**PostgreSQL only** — all operational data (clients, sites, racks, infrastructure devices, assets, users, config tasks, device templates, drifts, validation history, chat messages, audit logs) is stored in PostgreSQL.
 
-### Auth & roles (`src/components/AuthProvider.tsx`)
-- Three roles: `admin`, `developer`, `viewer`. Defaults to `viewer` on first sign-in.
-- **Admin is bootstrapped by hardcoded email** `rajkumarmadhu2024@gmail.com` in two places that must stay in sync: `AuthProvider` (sets `role: 'admin'` on first login) and `firestore.rules` (the `isAdmin()` helper). Changing the admin email requires editing both.
-- Profile lives at `/users/{uid}` in Firestore and is upserted on every `onAuthStateChanged` event. The route `/users` is admin-only (gated in `App.tsx` via `isAdmin && <Route ...>`).
+The Vite dev server proxies `/api/*` → `localhost:${API_PORT}` so frontend code always uses relative `/api` paths.
 
-### Tenants (`src/components/TenantProvider.tsx`)
-- The `tenants` collection is **auto-seeded** on first load if empty (`initialTenants` in the provider). Be aware of this when working against a fresh Firebase project — first read triggers writes.
-- `selectedTenantId` is in-memory only (no persistence). UI consumers should not assume tenant scoping is enforced server-side; Firestore rules currently scope by user/auth, not tenant.
+### Express backend (`server/`)
 
-### Firestore data model
-Authoritative schema is `firebase-blueprint.json` (entity definitions + collection paths). Security rules in `firestore.rules` re-validate field-level invariants — when adding a new collection, both files need entries.
+```
+server/
+  index.ts            # app entry — mounts all routers on /api/*
+  auth-jwt.ts         # JWT issue/verify helpers, password hashing
+  db.ts               # pg.Pool (DATABASE_URL or PG_* env vars)
+  audit.ts            # logAudit() — fire-and-forget INSERT to audit_logs; safe to call without await
+  middleware/auth.ts  # requireAuth / requireAdmin — JWT verification
+  routes/
+    auth.ts            # login, register, me endpoints
+    chats.ts           # chat message storage
+    upload.ts          # file upload → /uploads/ directory
+    users.ts           # user management
+    audit-logs.ts      # read/filter audit_logs table
+    clients.ts, sites.ts, racks.ts, infrastructure.ts, assets.ts,
+    config-tasks.ts, device-templates.ts, drifts.ts, validation-history.ts
+migrations/
+  001_initial.sql … 006_audit_logs_extend.sql
+uploads/               # uploaded files served statically at /uploads/
+```
 
-Immutable-by-rule collections (no update/delete from clients): `chats/{uid}/messages`, `audit_logs`, `validation_history`, `drifts`, `infrastructure/*/documents`. Don't add update flows for these without changing the rules.
+All routes are protected by `requireAuth`; admin-only mutations use `requireAdmin`. With `AUTH_BYPASS=true` all requests are treated as `admin` (bypass is logged with a warning).
 
-Two device collections coexist: `devices/{deviceId}` (validated by `isValidDeviceConfig`, simpler shape) and `infrastructure/{deviceId}` (validated by `isValidDevice`, the richer inventory shape from the blueprint). The app's Infrastructure/Assets pages use `infrastructure`; `devices` appears to be legacy/auxiliary.
+Health check: `GET /api/health` → `{ status: 'ok', ts: <ISO timestamp> }` (unauthenticated).
+
+Backend runs via `tsx` (no separate build step for dev). `tsconfig.server.json` compiles to **CommonJS** (`dist-server/`) — `"module": "ESNext"` must not be used there because `package.json` has `"type":"module"` at the repo root and `dist-server/package.json` overrides it back to `commonjs`. Do not use `import.meta` in server code.
+
+### Audit logging
+
+Use `logAudit(event)` from `server/audit.ts` inside route handlers. It is fire-and-forget — never throws and doesn't need `await`. Fields: `userId`, `action` (required); `type` (`User|System|Config`), `severity` (`Info|Warning|Critical`), `resourceType`, `resourceId`, `details` (all optional).
+
+### Frontend auth flow
+
+JWT-based authentication (no Firebase):
+1. `POST /api/auth/login` or `/api/auth/register` → returns `{ token, user }`
+2. Token stored in `localStorage` as key `jwt`
+3. All API calls in `src/lib/api.ts` attach `Authorization: Bearer <token>`
+4. `src/components/AuthProvider.tsx` manages auth state from JWT + `/api/auth/me`
+
+### Frontend provider stack (top-down)
+
+`main.tsx` → `App` → `ErrorBoundary` → `BrowserRouter` → `AuthProvider` → `ClientProvider` → `SiteProvider` → `AppContent`
+
+`AppContent` short-circuits to `<Login />` when there's no authenticated user; otherwise renders the routed `<Layout>` plus a global `<NetworkAI />` overlay (Gemini chat assistant mounted at app root, not per-route).
+
+### Data hierarchy & providers
+
+**Clients → Sites → Racks → Devices/Assets** (PostgreSQL model, defined in `src/types/inventory.ts`).
+
+- **`ClientProvider`** (`src/components/ClientProvider.tsx`) — fetches all clients from `/api/clients`, exposes `selectedClientId`, `subClients`, `descendantClients`, and `selectedClientFamily` (the selected client + all its children). Polls every 30 s. Snake_case API fields are mapped to camelCase in the provider.
+- **`SiteProvider`** (`src/components/SiteProvider.tsx`) — fetches sites filtered by the selected client family.
+- Client selection is in-memory only (no URL/localStorage persistence).
+- Sites have a many-to-many join (`client_sites` table) — `Site.clientIds` is the frontend view of this.
+
+### Auth & roles
+
+- Three roles: `admin`, `developer`, `viewer`. Default on first sign-in: `viewer`.
+- **Admin bootstrapped by hardcoded email** `rajkumarmadhu2024@gmail.com` in `src/components/AuthProvider.tsx` and `server/routes/users.ts`. Both must stay in sync.
+- User profiles are stored in PostgreSQL (`users` table). The `users` table is the source of truth for roles; `requireAdmin` queries Postgres directly.
+- The `/users` page/route is admin-only (gated in `App.tsx`).
+
+### Frontend API client (`src/lib/api.ts`)
+
+Single module exporting typed API objects (`clientsApi`, `sitesApi`, `racksApi`, `infrastructureApi`, `assetsApi`, `configTasksApi`, `deviceTemplatesApi`, `driftsApi`, `validationHistoryApi`, `usersApi`, `auditLogsApi`). Each wraps the internal `request()` helper which attaches the JWT as `Authorization: Bearer <token>`. This is the only place that should make fetch calls to `/api`.
 
 ### Gemini integration (`src/services/gemini.ts`)
-Single shared `GoogleGenAI` instance. Model IDs are centralized in the exported `models` map — prefer adding new helpers to this file rather than instantiating `GoogleGenAI` elsewhere. Several helpers (`generateVideo`, `generateMusic`, `textToSpeech`) return blob-URL strings that the caller is responsible for revoking.
+
+Single shared `GoogleGenAI` instance. Model IDs centralized in the exported `models` map — add new helpers here, don't instantiate `GoogleGenAI` elsewhere. Helpers returning blob URLs (`generateVideo`, `generateMusic`, `textToSpeech`) must have those URLs revoked by the caller.
 
 ### Routing & layout
-All routes are nested under a single `<Layout>` (`src/components/Layout.tsx`) which renders the sidebar + header + `<Outlet />`. The sidebar nav is hardcoded in `navItems`; adding a page means editing `App.tsx` (route) and `Layout.tsx` (nav entry). The `/users` route is conditionally rendered for admins only.
+
+All routes are nested under `<Layout>` (`src/components/Layout.tsx`), which renders the sidebar + header + `<Outlet />`. The sidebar `navItems` array is hardcoded — adding a page requires editing both `App.tsx` (route) and `Layout.tsx` (nav entry).
+
+### Pages with hardcoded / stub data
+
+Some pages mix real API data with hardcoded arrays for features not yet backed by the DB:
+
+| Page | Real data | Hardcoded / stub |
+|---|---|---|
+| `Dashboard.tsx` | assets count, drifts, devices | vendorData, complianceData, softwareData, cloudData, recentLogs |
+| `Monitoring.tsx` | infrastructure devices (status, type) | latency and uptime computed deterministically from device ID |
+| `Automation.tsx` | none | all script and build-history rows are static |
+| `AuditLog.tsx` | full real data from `/api/audit-logs` | — |
+| `Topology.tsx` | full real data from `/api/infrastructure` | — |
+
+When adding real backends to stub pages, wire to the existing API pattern in `src/lib/api.ts`.
 
 ### Conventions
-- Path alias `@/*` → `src/*` (configured in both `tsconfig.json` and `vite.config.ts`).
-- All Firebase SDK functions are re-exported from `src/firebase.ts` — import from there, not directly from `firebase/*`, to keep the SDK surface area centralized.
-- Firestore errors should go through `handleFirestoreError(err, OperationType.X, path)` from `src/lib/firestore-errors.ts`, which attaches auth context and rethrows a JSON-stringified payload.
-- UI primitives live in `src/components/ui/` (shadcn-style: `button`, `card`, `dialog`, `select`, etc.). Use `cn()` from `src/lib/utils.ts` (clsx + tailwind-merge) for conditional class names.
-- Tailwind v4 is wired via the `@tailwindcss/vite` plugin — there is no `tailwind.config.js`; theme tokens live in `src/index.css`.
-- Several pages are very large single files (e.g. `Infrastructure.tsx` ~128 KB, `Assets.tsx` ~95 KB, `Racks.tsx` ~38 KB). Prefer in-place edits over splitting unless explicitly asked.
+
+- Path alias `@/*` → `src/*` (in `tsconfig.json` and `vite.config.ts`). **Do not use `@/` in server code** — server files use relative imports only.
+- UI primitives in `src/components/ui/` (shadcn-style). Use `cn()` from `src/lib/utils.ts` (clsx + tailwind-merge).
+- Tailwind v4 via `@tailwindcss/vite` plugin — no `tailwind.config.js`; theme tokens in `src/index.css`.
+- Several pages are very large single files (`Infrastructure.tsx` ~128 KB, `Assets.tsx` ~95 KB, `Racks.tsx` ~38 KB). Prefer in-place edits over splitting unless explicitly asked.
+- `src/lib/firestore-errors.ts` — legacy error-logging utility kept for its `ErrorInfo` structure; not Firebase-specific.
+
+## Kubernetes deployment (`k8s/`)
+
+Self-contained manifests for in-cluster deployment (Harbor registry). Apply order:
+```
+00-namespace → 01-secrets → 02-postgres → 03-api → 04-web → 05-registry-secret → 06-api-image-importer
+```
+Secrets in `01-secrets.yaml` contain `<PLACEHOLDER>` values — substitute from Vault before applying. The `06-api-image-importer` job pulls the API image from Harbor into the cluster.
+
+## Roadmap trackers
+
+`docs/feature-roadmap.csv`, `docs/frontend-tracker.csv`, `docs/backend-tracker.csv` — CSV files tracking feature completion status. Not auto-generated; update manually when features ship.
