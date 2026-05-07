@@ -327,8 +327,8 @@ export function Configurations() {
                       className={`flex items-center py-1 border-b border-border/50 last:border-0 ${
                         line.type === 'added' ? 'bg-green-500/10 text-green-800' :
                         line.type === 'removed' ? 'bg-red-500/10 text-red-800' :
-                        line.type === 'modified' ? 'bg-blue-500/10 text-blue-800' :
-                        'text-slate-800 hover:bg-muted/50'
+                        line.type === 'modified' ? 'bg-[#C8622E]/10 text-[#7A3B1E]' :
+                        'text-foreground hover:bg-muted/50'
                       }`}
                     >
                       <div className="flex items-center px-3">
@@ -351,7 +351,7 @@ export function Configurations() {
                       <div className={`w-8 text-center font-bold select-none text-xs ${
                         line.type === 'added' ? 'text-green-600' :
                         line.type === 'removed' ? 'text-red-600' :
-                        line.type === 'modified' ? 'text-blue-600' : 'text-transparent'
+                        line.type === 'modified' ? 'text-[#C8622E]' : 'text-transparent'
                       }`}>
                         {line.type === 'added' ? '+' : line.type === 'removed' ? '-' : line.type === 'modified' ? '•' : ' '}
                       </div>
@@ -377,7 +377,7 @@ export function Configurations() {
             <div className="flex space-x-4 text-xs font-medium">
               <span className="flex items-center text-green-500"><div className="w-3 h-3 bg-green-500/20 border border-green-500 mr-1 rounded-sm"></div> Added</span>
               <span className="flex items-center text-red-500"><div className="w-3 h-3 bg-red-500/20 border border-red-500 mr-1 rounded-sm"></div> Removed</span>
-              <span className="flex items-center text-blue-500"><div className="w-3 h-3 bg-blue-500/20 border border-blue-500 mr-1 rounded-sm"></div> Modified</span>
+              <span className="flex items-center text-[#C8622E]"><div className="w-3 h-3 bg-[#C8622E]/20 border border-[#C8622E] mr-1 rounded-sm"></div> Modified</span>
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">

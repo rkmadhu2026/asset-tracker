@@ -85,7 +85,7 @@ const WarmTooltip = {
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 function typeIcon(t: string) {
-  if (t === 'User')   return <User className="w-3.5 h-3.5 text-blue-500" />;
+  if (t === 'User')   return <User className="w-3.5 h-3.5" style={{ color: '#C8622E' }} />;
   if (t === 'Config') return <Settings className="w-3.5 h-3.5" style={{ color: ACC }} />;
   return <Activity className="w-3.5 h-3.5 text-emerald-500" />;
 }

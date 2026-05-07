@@ -49,7 +49,7 @@ export function Automation() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center">
-                <FileCode2 className="w-5 h-5 mr-2 text-blue-500" />
+                <FileCode2 className="w-5 h-5 mr-2 text-[#C8622E]" />
                 Python Automation Scripts
               </CardTitle>
               <div className="relative w-64">
@@ -94,7 +94,7 @@ export function Automation() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-[#C8622E]">
                         <Play className="w-4 h-4" />
                       </Button>
                     </TableCell>
@@ -110,7 +110,7 @@ export function Automation() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
-                <History className="w-4 h-4 mr-2 text-purple-500" />
+                <History className="w-4 h-4 mr-2 text-[#7C3AED]" />
                 Recent Build History
               </CardTitle>
             </CardHeader>
@@ -137,9 +137,9 @@ export function Automation() {
             </CardContent>
           </Card>
 
-          <Card className="bg-blue-50 border-blue-100">
+          <Card style={{ background: '#FAE8DC', borderColor: '#E8C4AA' }}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-blue-900 flex items-center">
+              <CardTitle className="text-sm font-semibold flex items-center" style={{ color: '#7A3B1E' }}>
                 <Cpu className="w-4 h-4 mr-2" />
                 Automation Engine Status
               </CardTitle>
@@ -147,15 +147,15 @@ export function Automation() {
             <CardContent>
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
-                  <span className="text-blue-700">Worker Nodes</span>
-                  <span className="font-bold text-blue-900">4 Active</span>
+                  <span style={{ color: '#A84E24' }}>Worker Nodes</span>
+                  <span className="font-bold" style={{ color: '#7A3B1E' }}>4 Active</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-blue-700">Queue Depth</span>
-                  <span className="font-bold text-blue-900">0 Jobs</span>
+                  <span style={{ color: '#A84E24' }}>Queue Depth</span>
+                  <span className="font-bold" style={{ color: '#7A3B1E' }}>0 Jobs</span>
                 </div>
                 <div className="pt-2">
-                  <Badge className="bg-blue-600 hover:bg-blue-700">Healthy</Badge>
+                  <Badge style={{ background: '#C8622E', color: 'white' }}>Healthy</Badge>
                 </div>
               </div>
             </CardContent>

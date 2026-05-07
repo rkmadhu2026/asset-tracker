@@ -122,10 +122,10 @@ const RackDependencyMap = ({ devices }: { devices: any[] }) => {
   );
 
   return (
-    <div className="h-[500px] w-full border rounded-xl bg-slate-50 overflow-hidden relative">
+    <div className="h-[500px] w-full border rounded-xl overflow-hidden relative" style={{ background: '#FAF7F3' }}>
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
         <div className="flex items-center space-x-2 bg-white/80 backdrop-blur p-2 rounded-lg border shadow-sm">
-          <div className="w-3 h-3 bg-blue-500 rounded-full" />
+          <div className="w-3 h-3 rounded-full" style={{ background: '#C8622E' }} />
           <span className="text-[10px] font-medium">Network</span>
           <div className="w-3 h-3 bg-amber-500 rounded-full ml-2" />
           <span className="text-[10px] font-medium">Power</span>
@@ -203,8 +203,8 @@ const RackVisualization = ({ rack, devices, onDeviceClick }: { rack: any, device
                       <div className="w-12 h-1.5 bg-gray-700 rounded-full overflow-hidden">
                         <div 
                           className={cn("h-full", 
-                            device.power === 'UPS-A' ? "bg-blue-500" :
-                            device.power === 'UPS-B' ? "bg-purple-500" :
+                            device.power === 'UPS-A' ? "bg-[#C8622E]" :
+                            device.power === 'UPS-B' ? "bg-[#7C3AED]" :
                             device.power === 'PDU-1' ? "bg-orange-500" : "bg-yellow-500"
                           )} 
                           style={{ width: `${Math.floor(Math.random() * 80) + 10}%` }}
@@ -413,7 +413,7 @@ export function Racks() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="p-4">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-100 rounded-lg"><Zap className="w-5 h-5 text-blue-600" /></div>
+                  <div className="p-2 rounded-lg" style={{ background: '#FAE8DC' }}><Zap className="w-5 h-5 text-[#C8622E]" /></div>
                   <div>
                     <p className="text-[10px] text-muted-foreground font-bold uppercase">Power Usage</p>
                     <p className="text-lg font-bold">8.4 kW / {selectedRack.powerCapacity}</p>
@@ -431,7 +431,7 @@ export function Racks() {
               </Card>
               <Card className="p-4">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-purple-100 rounded-lg"><Layout className="w-5 h-5 text-purple-600" /></div>
+                  <div className="p-2 rounded-lg" style={{ background: '#EDE4F6' }}><Layout className="w-5 h-5 text-[#7C3AED]" /></div>
                   <div>
                     <p className="text-[10px] text-muted-foreground font-bold uppercase">Occupancy</p>
                     <p className="text-lg font-bold">{selectedRack.occupancy}%</p>
@@ -567,7 +567,7 @@ export function Racks() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center p-3 border rounded-lg bg-muted/20">
-                    <div className="p-2 bg-blue-100 rounded-full mr-4"><Network className="w-4 h-4 text-blue-600" /></div>
+                    <div className="p-2 rounded-full mr-4" style={{ background: '#FAE8DC' }}><Network className="w-4 h-4 text-[#C8622E]" /></div>
                     <div className="flex-1">
                       <p className="text-xs font-bold">Network Connectivity</p>
                       <p className="text-[10px] text-muted-foreground">All compute nodes connected to sw-core-01 via 10G SFP+.</p>
@@ -622,13 +622,13 @@ export function Racks() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4 bg-blue-50 border-blue-100">
+        <Card className="p-4" style={{ background: '#FAE8DC', borderColor: '#E8C4AA' }}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-blue-700 font-bold uppercase">Total Racks</p>
-              <p className="text-2xl font-bold text-blue-900">{racks.length}</p>
+              <p className="text-xs font-bold uppercase" style={{ color: '#A84E24' }}>Total Racks</p>
+              <p className="text-2xl font-bold" style={{ color: '#7A3B1E' }}>{racks.length}</p>
             </div>
-            <Box className="w-8 h-8 text-blue-200" />
+            <Box className="w-8 h-8" style={{ color: '#E8C4AA' }} />
           </div>
         </Card>
         <Card className="p-4 bg-green-50 border-green-100">
@@ -642,13 +642,13 @@ export function Racks() {
             <Layout className="w-8 h-8 text-green-200" />
           </div>
         </Card>
-        <Card className="p-4 bg-purple-50 border-purple-100">
+        <Card className="p-4" style={{ background: '#EDE4F6', borderColor: '#D8C6F0' }}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-purple-700 font-bold uppercase">Total Devices</p>
-              <p className="text-2xl font-bold text-purple-900">{rackDevices.length}</p>
+              <p className="text-xs font-bold uppercase" style={{ color: '#5B21B6' }}>Total Devices</p>
+              <p className="text-2xl font-bold" style={{ color: '#3B0764' }}>{rackDevices.length}</p>
             </div>
-            <Zap className="w-8 h-8 text-purple-200" />
+            <Zap className="w-8 h-8" style={{ color: '#D8C6F0' }} />
           </div>
         </Card>
       </div>

@@ -320,7 +320,7 @@ export function NetworkAI() {
                               href={chunk.web?.uri || chunk.maps?.uri} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="block text-[10px] text-blue-500 hover:underline truncate"
+                              className="block text-[10px] text-[#C8622E] hover:underline truncate"
                             >
                               {chunk.web?.title || chunk.maps?.title || 'Grounding Source'}
                             </a>

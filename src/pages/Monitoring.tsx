@@ -104,7 +104,7 @@ export function Monitoring() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-indigo-500 text-white">
+            <div className="p-2 rounded-lg text-white" style={{ background: '#C8622E' }}>
               <Activity className="h-5 w-5" />
             </div>
             Network Monitoring
@@ -119,7 +119,10 @@ export function Monitoring() {
             <RefreshCw className={cn('w-4 h-4 mr-1.5', loading && 'animate-spin')} />
             Refresh
           </Button>
-          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white">
+          <Button size="sm" className="text-white" style={{ background: '#C8622E' }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#A84E24')}
+            onMouseLeave={e => (e.currentTarget.style.background = '#C8622E')}
+          >
             <Zap className="w-4 h-4 mr-1.5" />
             Configure Alerts
           </Button>

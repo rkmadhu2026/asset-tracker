@@ -52,16 +52,16 @@ function subnet3(ip?: string): string {
 const PHYS_STYLE = {
   type: 'smoothstep',
   animated: false,
-  labelStyle: { fontSize: 7, fill: '#94a3b8' },
-  markerEnd: { type: MarkerType.ArrowClosed, color: '#64748b' },
-  style: { stroke: '#64748b', strokeWidth: 2 },
+  labelStyle: { fontSize: 7, fill: '#A09688' },
+  markerEnd: { type: MarkerType.ArrowClosed, color: '#8C7E6E' },
+  style: { stroke: '#8C7E6E', strokeWidth: 2 },
 };
 
 const LOGIC_STYLE = {
   type: 'smoothstep',
   animated: true,
-  labelStyle: { fontSize: 7, fill: '#6366f1' },
-  style: { stroke: '#6366f1', strokeWidth: 1.5 },
+  labelStyle: { fontSize: 7, fill: '#C8622E' },
+  style: { stroke: '#C8622E', strokeWidth: 1.5 },
 };
 
 // Round-robin: each lower device gets ONE upper device
@@ -170,25 +170,26 @@ const DeviceNode = ({ data }: { data: any }) => {
     data.status === 'Warning' ? 'bg-yellow-500' : 'bg-red-500';
 
   return (
-    <div className="px-3 py-2 rounded-lg bg-white border border-slate-200 shadow-sm min-w-[155px] cursor-grab select-none">
-      <Handle type="target" position={Position.Top}    className="!w-2 !h-2 !bg-slate-400 !border-0" />
+    <div className="px-3 py-2 rounded-lg min-w-[155px] cursor-grab select-none"
+      style={{ background: '#FDFAF7', border: '1px solid #E8E1D8', boxShadow: '0 1px 4px rgba(41,37,36,0.08)' }}>
+      <Handle type="target" position={Position.Top}    className="!w-2 !h-2 !bg-[#A09688] !border-0" />
       <div className="flex items-center gap-2">
-        <div className="rounded-md p-1.5 bg-slate-100 shrink-0">
-          <Icon className="h-3.5 w-3.5 text-slate-600" />
+        <div className="rounded-md p-1.5 shrink-0" style={{ background: '#F0EAE0' }}>
+          <Icon className="h-3.5 w-3.5 text-[#6B6458]" />
         </div>
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold leading-tight truncate">{data.label}</p>
-          <p className="text-[9px] text-slate-400 truncate">{data.type}</p>
+          <p className="text-[11px] font-semibold leading-tight truncate text-[#19160F]">{data.label}</p>
+          <p className="text-[9px] text-[#A09688] truncate">{data.type}</p>
         </div>
       </div>
       <div className="mt-1.5 flex items-center justify-between">
         <div className="flex items-center gap-1">
           <div className={`w-1.5 h-1.5 rounded-full ${dot}`} />
-          <span className="text-[8px] text-slate-500">{data.status}</span>
+          <span className="text-[8px] text-[#6B6458]">{data.status}</span>
         </div>
-        <span className="text-[8px] text-slate-400 font-mono">{data.ip || '—'}</span>
+        <span className="text-[8px] text-[#A09688] font-mono">{data.ip || '—'}</span>
       </div>
-      <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-slate-400 !border-0" />
+      <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-[#A09688] !border-0" />
     </div>
   );
 };
@@ -268,8 +269,8 @@ function TopologyInner() {
           {!noClient && (
             <>
               <Badge variant="outline">{stats.nodes} nodes</Badge>
-              <Badge variant="outline" className="text-slate-600 border-slate-400">{stats.physical} physical</Badge>
-              <Badge variant="outline" className="text-indigo-600 border-indigo-300">{stats.logical} logical</Badge>
+              <Badge variant="outline" className="text-[#6B6458] border-[#A09688]">{stats.physical} physical</Badge>
+              <Badge variant="outline" className="text-[#C8622E] border-[#C8622E]/40">{stats.logical} logical</Badge>
             </>
           )}
           <Button variant="outline" size="sm" onClick={() => load(selectedClientId)} disabled={loading || noClient}>
@@ -291,18 +292,19 @@ function TopologyInner() {
 
       <Card className="flex-1 overflow-hidden border relative">
         {/* Legend */}
-        <div className="absolute top-3 left-3 z-10 bg-white/95 border rounded-lg p-3 shadow-sm text-[11px] space-y-1.5 min-w-[140px]">
-          <p className="font-semibold text-xs border-b pb-1">Legend</p>
-          <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"/><span>Active</span></div>
-          <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-yellow-500"/><span>Warning</span></div>
-          <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-500"/><span>Offline</span></div>
-          <div className="border-t pt-1.5 space-y-1.5">
-            <div className="flex items-center gap-2">
-              <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#64748b" strokeWidth="2"/></svg>
+        <div className="absolute top-3 left-3 z-10 rounded-lg p-3 text-[11px] space-y-1.5 min-w-[140px]"
+          style={{ background: 'rgba(253,250,247,0.96)', border: '1px solid #E8E1D8', boxShadow: '0 2px 8px rgba(41,37,36,0.1)' }}>
+          <p className="font-semibold text-xs pb-1" style={{ borderBottom: '1px solid #E8E1D8', color: '#19160F' }}>Legend</p>
+          <div className="flex items-center gap-2 text-[#6B6458]"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"/><span>Active</span></div>
+          <div className="flex items-center gap-2 text-[#6B6458]"><div className="w-1.5 h-1.5 rounded-full bg-yellow-500"/><span>Warning</span></div>
+          <div className="flex items-center gap-2 text-[#6B6458]"><div className="w-1.5 h-1.5 rounded-full bg-red-500"/><span>Offline</span></div>
+          <div className="pt-1.5 space-y-1.5" style={{ borderTop: '1px solid #E8E1D8' }}>
+            <div className="flex items-center gap-2 text-[#6B6458]">
+              <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#8C7E6E" strokeWidth="2"/></svg>
               <span>Physical</span>
             </div>
-            <div className="flex items-center gap-2">
-              <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#6366f1" strokeWidth="2" strokeDasharray="5 3"/></svg>
+            <div className="flex items-center gap-2 text-[#6B6458]">
+              <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#C8622E" strokeWidth="2" strokeDasharray="5 3"/></svg>
               <span>Logical</span>
             </div>
           </div>
@@ -344,9 +346,9 @@ function TopologyInner() {
           nodeTypes={nodeTypes}
           minZoom={0.05}
           maxZoom={2.5}
-          className="bg-slate-50/40"
+          style={{ background: '#FAF7F3' }}
         >
-          <Background color="#cbd5e1" gap={24} />
+          <Background color="#E8E1D8" gap={24} />
           <Controls />
           <MiniMap
             nodeColor={n => {

@@ -237,7 +237,7 @@ export function Assets() {
 
   const getTypeIcon = (type: string) => {
     switch(type) {
-      case 'Network': return <Network className="w-4 h-4 text-blue-500" />;
+      case 'Network': return <Network className="w-4 h-4 text-[#C8622E]" />;
       case 'Firewall': return <ShieldAlert className="w-4 h-4 text-red-500" />;
       case 'Server': return <Server className="w-4 h-4 text-green-500" />;
       default: return <HardDrive className="w-4 h-4 text-gray-500" />;
@@ -775,7 +775,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center text-sm">
-                          <Network className="w-4 h-4 mr-2 text-blue-500" />
+                          <Network className="w-4 h-4 mr-2 text-[#C8622E]" />
                           <span className="text-muted-foreground mr-2">Connected to:</span>
                           <span className="font-medium">Core-Switch-Agg-01 (Network Connection)</span>
                         </div>
@@ -799,7 +799,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                           <span className="font-medium">App-Server-Cluster-01 (Server)</span>
                         </div>
                         <div className="flex items-center text-sm">
-                          <AppWindow className="w-4 h-4 mr-2 text-purple-500" />
+                          <AppWindow className="w-4 h-4 mr-2 text-[#7C3AED]" />
                           <span className="text-muted-foreground mr-2">Supports App:</span>
                           <span className="font-medium">ERP Production System (Application)</span>
                         </div>
@@ -1000,34 +1000,35 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
 
       {/* CMD Center Modal */}
       <Dialog open={isCmdOpen} onOpenChange={setIsCmdOpen}>
-        <DialogContent className="sm:max-w-[600px] bg-slate-950 text-slate-50 border-slate-800 font-mono p-0 overflow-hidden">
-          <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+        <DialogContent className="sm:max-w-[600px] font-mono p-0 overflow-hidden" style={{ background: '#1A1713', color: '#F7F3ED', border: '1px solid #3D3025' }}>
+          <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid #3D3025', background: '#14120E' }}>
             <div className="flex items-center space-x-2">
-              <Command className="w-4 h-4 text-blue-400" />
-              <span className="text-sm font-bold">Asset Command Center</span>
+              <Command className="w-4 h-4 text-[#E07850]" />
+              <span className="text-sm font-bold text-[#F7F3ED]">Asset Command Center</span>
             </div>
-            <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-400">v1.0.0</Badge>
+            <Badge variant="outline" className="text-[10px]" style={{ borderColor: '#4A3F35', color: '#A09688' }}>v1.0.0</Badge>
           </div>
           <div className="h-[300px] overflow-y-auto p-4 space-y-1 text-sm">
             {cmdOutput.map((line, i) => (
               <div key={i} className={cn(
-                line.startsWith('>') ? "text-blue-400" : "text-slate-300",
+                line.startsWith('>') ? "text-[#E07850]" : "text-[#D4C8BC]",
                 line.includes('Unknown') ? "text-red-400" : ""
               )}>
                 {line}
               </div>
             ))}
           </div>
-          <form onSubmit={handleCmdSubmit} className="p-4 bg-slate-900/50 border-t border-slate-800 flex items-center space-x-2">
-            <ChevronRight className="w-4 h-4 text-blue-400" />
-            <input 
+          <form onSubmit={handleCmdSubmit} className="p-4 flex items-center space-x-2" style={{ background: '#14120E', borderTop: '1px solid #3D3025' }}>
+            <ChevronRight className="w-4 h-4 text-[#E07850]" />
+            <input
               autoFocus
-              className="flex-1 bg-transparent border-none outline-none text-sm text-slate-50 placeholder:text-slate-600"
+              className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-[#6B5A4E]"
+              style={{ color: '#F7F3ED' }}
               placeholder="Enter command..."
               value={cmdInput}
               onChange={(e) => setCmdInput(e.target.value)}
             />
-            <Button type="submit" size="sm" variant="ghost" className="h-7 w-7 p-0 hover:bg-slate-800">
+            <Button type="submit" size="sm" variant="ghost" className="h-7 w-7 p-0 hover:bg-[#2A2318]">
               <Play className="w-3 h-3" />
             </Button>
           </form>
@@ -1150,7 +1151,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
           <div className="py-4">
             {isValidatingConfig ? (
               <div className="flex flex-col items-center justify-center space-y-4 py-8">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#C8622E]" />
                 <p className="text-sm text-muted-foreground">Analyzing configuration with Gemini AI...</p>
               </div>
             ) : configValidationResult ? (
@@ -1237,9 +1238,12 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
 
       {/* Now Assist Floating Button */}
       <div className="fixed bottom-6 right-6 z-50">
-        <Button 
-          size="lg" 
-          className="rounded-full h-14 w-14 shadow-xl bg-blue-600 hover:bg-blue-700"
+        <Button
+          size="lg"
+          className="rounded-full h-14 w-14 shadow-xl text-white"
+          style={{ background: '#C8622E' }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#A84E24')}
+          onMouseLeave={e => (e.currentTarget.style.background = '#C8622E')}
           onClick={() => setShowNowAssist(!showNowAssist)}
         >
           <Sparkles className="w-6 h-6 text-white" />
@@ -1247,8 +1251,8 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
       </div>
 
       {showNowAssist && (
-        <Card className="fixed bottom-24 right-6 w-80 z-50 shadow-2xl border-blue-200 animate-in slide-in-from-bottom-4">
-          <CardHeader className="bg-blue-600 text-white rounded-t-lg py-3">
+        <Card className="fixed bottom-24 right-6 w-80 z-50 shadow-2xl animate-in slide-in-from-bottom-4" style={{ borderColor: '#E8C4AA' }}>
+          <CardHeader className="rounded-t-lg py-3 text-white" style={{ background: 'linear-gradient(135deg, #C8622E, #A84E24)' }}>
             <CardTitle className="text-sm flex items-center">
               <Sparkles className="w-4 h-4 mr-2" />
               Now Assist for HAM
@@ -1270,7 +1274,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
               </Button>
             </div>
             <div className="flex space-x-2">
-              <input type="text" placeholder="Ask me anything..." className="flex-1 text-xs border rounded px-2 py-1 outline-none focus:ring-1 ring-blue-500" />
+              <input type="text" placeholder="Ask me anything..." className="flex-1 text-xs border rounded px-2 py-1 outline-none focus:ring-1 ring-[#C8622E]" />
               <Button size="sm" className="h-8 w-8 p-0"><ArrowRightLeft className="w-4 h-4" /></Button>
             </div>
           </CardContent>
@@ -1304,7 +1308,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                   <p className="text-sm font-medium text-muted-foreground">Recent Movements</p>
                   <h3 className="text-2xl font-bold mt-1">24 (In/Out)</h3>
                 </div>
-                <div className="p-3 bg-blue-100 rounded-full"><ArrowRightLeft className="w-6 h-6 text-blue-600" /></div>
+                <div className="p-3 rounded-full" style={{ background: '#FAE8DC' }}><ArrowRightLeft className="w-6 h-6 text-[#C8622E]" /></div>
               </div>
             </Card>
           </div>
@@ -1435,7 +1439,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
         <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="p-4 flex items-center space-x-4">
-              <div className="p-2 bg-blue-100 rounded-lg"><Server className="w-5 h-5 text-blue-600" /></div>
+              <div className="p-2 rounded-lg" style={{ background: '#FAE8DC' }}><Server className="w-5 h-5 text-[#C8622E]" /></div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Servers</p>
                 <p className="text-xl font-bold">{assetsData.filter(a => a.type === 'Server' || a.type === 'VM').length}</p>
@@ -1449,7 +1453,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
               </div>
             </Card>
             <Card className="p-4 flex items-center space-x-4">
-              <div className="p-2 bg-purple-100 rounded-lg"><Database className="w-5 h-5 text-purple-600" /></div>
+              <div className="p-2 rounded-lg" style={{ background: '#EDE4F6' }}><Database className="w-5 h-5 text-[#7C3AED]" /></div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Storage</p>
                 <p className="text-xl font-bold">{assetsData.filter(a => a.type === 'Storage').length}</p>
@@ -1503,7 +1507,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100"
+                          className="bg-[#EDE4F6] text-[#7C3AED] border-[#D8C6F0] hover:bg-[#E0D0F2]"
                           onClick={() => setIsCompareModalOpen(true)}
                         >
                           <Columns className="w-4 h-4 mr-2" />
@@ -1513,7 +1517,7 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
+                        className="bg-[#FAE8DC] text-[#C8622E] border-[#E8C4AA] hover:bg-[#F5D5BE]"
                         onClick={() => handleNormalize('selected')}
                         disabled={isNormalizing}
                       >
@@ -1521,10 +1525,10 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
                         Normalize ({selectedAssetIds.length})
                       </Button>
                       <div className="relative">
-                        <Edit className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-blue-600 pointer-events-none" />
-                        <Select 
+                        <Edit className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-[#C8622E] pointer-events-none" />
+                        <Select
                           value=""
-                          className="h-9 w-[160px] bg-blue-50 text-blue-600 border-blue-200 pl-8"
+                          className="h-9 w-[160px] bg-[#FAE8DC] text-[#C8622E] border-[#E8C4AA] pl-8"
                           onValueChange={(val) => {
                             if (val) {
                               setBulkActionType(val as any);

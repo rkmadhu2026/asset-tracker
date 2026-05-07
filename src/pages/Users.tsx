@@ -56,9 +56,9 @@ export function UsersPage() {
       case 'admin':
         return <Badge className="bg-red-100 text-red-700 hover:bg-red-200 border-red-200"><Shield className="w-3 h-3 mr-1" /> Admin</Badge>;
       case 'developer':
-        return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200"><Code className="w-3 h-3 mr-1" /> Developer</Badge>;
+        return <Badge className="bg-[#FAE8DC] text-[#A84E24] hover:bg-[#F5D5BE] border-[#E8C4AA]"><Code className="w-3 h-3 mr-1" /> Developer</Badge>;
       case 'viewer':
-        return <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200"><Eye className="w-3 h-3 mr-1" /> Viewer</Badge>;
+        return <Badge className="bg-[#F0EAE0] text-[#6B6458] hover:bg-[#E8E1D8] border-[#E8E1D8]"><Eye className="w-3 h-3 mr-1" /> Viewer</Badge>;
       default:
         return <Badge variant="outline">{role}</Badge>;
     }

@@ -17,9 +17,9 @@ function severityBadge(s: string) {
 }
 
 function typeIcon(t: string) {
-  if (t === 'User')   return <User className="w-4 h-4 text-blue-500" />;
-  if (t === 'Config') return <Settings className="w-4 h-4 text-purple-500" />;
-  return <Activity className="w-4 h-4 text-green-500" />;
+  if (t === 'User')   return <User className="w-4 h-4 text-[#C8622E]" />;
+  if (t === 'Config') return <Settings className="w-4 h-4 text-[#D97706]" />;
+  return <Activity className="w-4 h-4 text-[#16A34A]" />;
 }
 
 function detailsText(row: AuditLogRow): string {

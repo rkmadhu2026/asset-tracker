@@ -906,13 +906,13 @@ const connections = [
 
 const getTypeIcon = (type: string) => {
   switch (type) {
-    case 'Switch': return <Network className="w-3.5 h-3.5 mr-1.5 text-blue-500" />;
-    case 'Router': return <Globe className="w-3.5 h-3.5 mr-1.5 text-indigo-500" />;
+    case 'Switch': return <Network className="w-3.5 h-3.5 mr-1.5 text-[#C8622E]" />;
+    case 'Router': return <Globe className="w-3.5 h-3.5 mr-1.5 text-[#D97706]" />;
     case 'Server': return <Server className="w-3.5 h-3.5 mr-1.5 text-green-500" />;
     case 'Firewall': return <Shield className="w-3.5 h-3.5 mr-1.5 text-red-500" />;
     case 'Access Point': return <Zap className="w-3.5 h-3.5 mr-1.5 text-yellow-500" />;
     case 'Storage': return <HardDrive className="w-3.5 h-3.5 mr-1.5 text-orange-500" />;
-    case 'Load Balancer': return <Layers className="w-3.5 h-3.5 mr-1.5 text-purple-500" />;
+    case 'Load Balancer': return <Layers className="w-3.5 h-3.5 mr-1.5 text-[#7C3AED]" />;
     default: return <Activity className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />;
   }
 };
@@ -1374,7 +1374,7 @@ export function Infrastructure() {
           {selectedDeviceIds.length > 0 && (
             <Button 
               variant="outline" 
-              className="flex-1 sm:flex-none border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100"
+              className="flex-1 sm:flex-none border-[#E8C4AA] bg-[#FAE8DC] text-[#C8622E] hover:bg-[#F5D5BE]"
               onClick={() => setIsBulkEditOpen(true)}
             >
               Bulk Edit Type ({selectedDeviceIds.length})
@@ -1412,14 +1412,14 @@ export function Infrastructure() {
         </TabsList>
         <TabsContent className={pageTab === 'inventory' ? 'block space-y-6' : 'hidden'}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="p-4 border-l-4 border-l-blue-500">
+        <Card className="p-4 border-l-4 border-l-[#C8622E]">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground font-medium">Network Switches</p>
               <p className="text-2xl font-bold">{devices.filter(d => d.type === 'Switch' || d.type === 'Router').length}</p>
               <p className="text-[10px] text-muted-foreground">Cisco, Aruba, Arista, Huawei</p>
             </div>
-            <Network className="w-8 h-8 text-blue-100" />
+            <Network className="w-8 h-8 text-[#E8C4AA]" />
           </div>
         </Card>
         <Card className="p-4 border-l-4 border-l-green-500">
@@ -1442,14 +1442,14 @@ export function Infrastructure() {
             <Shield className="w-8 h-8 text-red-100" />
           </div>
         </Card>
-        <Card className="p-4 border-l-4 border-l-purple-500">
+        <Card className="p-4 border-l-4 border-l-[#7C3AED]">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground font-medium">Storage & Other</p>
               <p className="text-2xl font-bold">{devices.filter(d => d.type === 'Storage' || d.type === 'Power' || d.type === 'Device').length}</p>
               <p className="text-[10px] text-muted-foreground">PSUs, Fans, SFPs, Memory</p>
             </div>
-            <Cpu className="w-8 h-8 text-purple-100" />
+            <Cpu className="w-8 h-8 text-[#D8C6F0]" />
           </div>
         </Card>
         <Card className="p-4 border-l-4 border-l-orange-500">
@@ -1681,7 +1681,7 @@ export function Infrastructure() {
                             key={device.id} 
                             className={cn(
                               "cursor-pointer hover:bg-muted/50 transition-colors",
-                              selectedDeviceIds.includes(device.id) && "bg-blue-50/50"
+                              selectedDeviceIds.includes(device.id) && "bg-[#FAE8DC]/50"
                             )}
                             onClick={() => {
                               setSelectedDeviceId(device.id);
@@ -1725,7 +1725,7 @@ export function Infrastructure() {
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
-                                  className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  className="text-xs text-[#C8622E] hover:text-[#A84E24] hover:bg-[#FAE8DC]"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedDeviceId(device.id);
@@ -1774,7 +1774,7 @@ export function Infrastructure() {
                                         Edit Device
                                       </button>
                                       <button 
-                                        className="w-full px-4 py-2 text-xs hover:bg-muted flex items-center text-blue-600"
+                                        className="w-full px-4 py-2 text-xs hover:bg-[#FAE8DC] flex items-center text-[#C8622E]"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           // Mock connectivity check
@@ -1815,7 +1815,7 @@ export function Infrastructure() {
                                 key={device.id} 
                                 className={cn(
                                   "cursor-pointer hover:bg-muted/50 transition-colors",
-                                  selectedDeviceIds.includes(device.id) && "bg-blue-50/50"
+                                  selectedDeviceIds.includes(device.id) && "bg-[#FAE8DC]/50"
                                 )}
                                 onClick={() => {
                                   setSelectedDeviceId(device.id);
@@ -1859,7 +1859,7 @@ export function Infrastructure() {
                                     <Button 
                                       variant="ghost" 
                                       size="sm" 
-                                      className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                      className="text-xs text-[#C8622E] hover:text-[#A84E24] hover:bg-[#FAE8DC]"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setSelectedDeviceId(device.id);
@@ -1908,7 +1908,7 @@ export function Infrastructure() {
                                             Edit Device
                                           </button>
                                           <button 
-                                            className="w-full px-4 py-2 text-xs hover:bg-muted flex items-center text-blue-600"
+                                            className="w-full px-4 py-2 text-xs hover:bg-[#FAE8DC] flex items-center text-[#C8622E]"
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               // Mock connectivity check
@@ -1942,7 +1942,7 @@ export function Infrastructure() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
-                <Info className="w-4 h-4 mr-2 text-blue-500" />
+                <Info className="w-4 h-4 mr-2 text-[#C8622E]" />
                 Model Catalog
               </CardTitle>
               <CardDescription>Standardized hardware profiles.</CardDescription>
@@ -2546,7 +2546,7 @@ export function Infrastructure() {
                             <div 
                               className={cn(
                                 "h-full transition-all duration-500",
-                                parseInt(selectedDevice.temp) > 55 ? "bg-red-500" : "bg-blue-500"
+                                parseInt(selectedDevice.temp) > 55 ? "bg-red-500" : "bg-[#C8622E]"
                               )} 
                               style={{ width: `${(parseInt(selectedDevice.temp) / 80) * 100}%` }} 
                             />
@@ -2586,7 +2586,7 @@ export function Infrastructure() {
                 <TabsContent className={activeTab === 'maintenance' ? 'block space-y-6' : 'hidden'}>
                   <div className="space-y-3">
                     <div className="flex items-start space-x-3 p-2.5 border rounded-lg bg-muted/20">
-                      <div className="p-1.5 bg-blue-100 rounded-full"><Clock className="w-3 h-3 text-blue-600" /></div>
+                      <div className="p-1.5 rounded-full" style={{ background: '#FAE8DC' }}><Clock className="w-3 h-3 text-[#C8622E]" /></div>
                       <div className="flex-1">
                         <p className="text-xs font-bold">Firmware Upgrade</p>
                         <p className="text-[10px] text-muted-foreground">Upgraded to v17.6.3</p>
@@ -2640,7 +2640,7 @@ export function Infrastructure() {
                       {documents.map((doc) => (
                         <div key={doc.id} className="flex items-center justify-between p-2 border rounded-lg">
                           <p className="text-xs font-medium">{doc.name}</p>
-                          <a href={doc.url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">View</a>
+                          <a href={doc.url} target="_blank" rel="noreferrer" className="text-xs text-[#C8622E] hover:underline">View</a>
                         </div>
                       ))}
                     </div>
