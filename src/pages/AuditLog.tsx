@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Search, Filter, Download, Clock, User, Settings, Activity, X, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { auditLogsApi, type AuditLogRow } from '@/lib/api';
+import { FeatureHero } from '@/components/FeatureHero';
 
 const TYPE_OPTIONS   = ['User', 'System', 'Config'];
 const SEV_OPTIONS    = ['Info', 'Warning', 'Critical'];
@@ -89,18 +90,23 @@ export function AuditLog() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Audit Logs</h1>
-          <p className="text-muted-foreground mt-1">
-            Comprehensive record of all user actions, system events, and configuration changes.
-          </p>
-        </div>
+      <FeatureHero
+        eyebrow="Governance · Audit Trail"
+        title="Audit Logs"
+        description="Comprehensive record of user actions, system events, severity signals, and configuration changes."
+        icon={Activity}
+        stats={[
+          { label: 'Loaded Events', value: logs.length, icon: Activity },
+          { label: 'Filters', value: activeFilters, icon: Filter },
+          { label: 'Critical', value: logs.filter(l => l.severity === 'Critical').length, icon: Settings },
+        ]}
+        actions={
         <Button variant="outline" onClick={handleExport} disabled={!logs.length}>
           <Download className="w-4 h-4 mr-2" />
           Export CSV
         </Button>
-      </div>
+        }
+      />
 
       <Card>
         <CardHeader className="pb-4">

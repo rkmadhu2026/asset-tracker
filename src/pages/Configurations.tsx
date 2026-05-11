@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ConfigurationManager } from '@/components/ConfigurationManager';
 import { useClient } from '@/components/ClientProvider';
+import { FeatureHero } from '@/components/FeatureHero';
 
 const diffData = [
   { line: 1, type: 'unchanged', content: 'version 17.3' },
@@ -141,19 +142,26 @@ export function Configurations() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Configuration Management</h1>
-          <p className="text-muted-foreground mt-1">Version control, diffs, and automated backups.</p>
-        </div>
-        <div className="flex space-x-2">
+      <FeatureHero
+        eyebrow="Operations · Configuration Control"
+        title="Configuration Management"
+        description="Version control, drift detection, validation history, configuration diffs, and automated backups."
+        icon={FileCode2}
+        stats={[
+          { label: 'Devices', value: devices.length, icon: FileCode2 },
+          { label: 'Drifts', value: drifts.length, icon: GitCommit },
+          { label: 'Tasks', value: tasks.length, icon: History },
+        ]}
+        actions={
+          <>
           <Button variant="outline">
             <Search className="w-4 h-4 mr-2" />
             Regex Search
           </Button>
           <Button>Backup Now</Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <Tabs className="w-full">
         <TabsList className="mb-4">

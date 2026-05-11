@@ -7,6 +7,10 @@ import {
   Shield, Router, Database as DatabaseIcon, Cpu, HardDrive, Zap,
   ArrowUpRight, ArrowDownRight, CheckCircle2, Clock, User,
   Settings, TrendingUp, BarChart3, Layers,
+  Headphones, FileText, Package, Calendar, DollarSign, Award,
+  Wrench, Inbox, TimerReset, AlertCircle, BookOpen, Smile,
+  GitPullRequest, AlertOctagon, Truck, Star, CalendarClock, Search,
+  Monitor as MonitorIcon, Laptop, Smartphone, Printer,
 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -14,7 +18,7 @@ import {
 } from 'recharts';
 import { Link } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { assetsApi, driftsApi, infrastructureApi, auditLogsApi, type AuditLogRow } from '../lib/api';
+import { assetsApi, driftsApi, infrastructureApi, auditLogsApi, configTasksApi, type AuditLogRow, type ConfigTask } from '../lib/api';
 import { useClient } from '@/components/ClientProvider';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -185,21 +189,874 @@ function Kicker({ children }: { children: React.ReactNode }) {
   );
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   SERVICE DESK TAB  (GLPI-style helpdesk + lifecycle + finance)
+══════════════════════════════════════════════════════════════════════════ */
+
+const PRIORITY_COLORS: Record<string, string> = {
+  High:   '#DC2626',
+  Medium: '#D97706',
+  Low:    '#16A34A',
+};
+
+const TICKET_STATUS_COLORS: Record<string, string> = {
+  Pending:    '#D97706',
+  InProgress: '#C8622E',
+  Resolved:   '#16A34A',
+};
+
+// Demo data — replace once corresponding tables exist in DB.
+const TICKET_CATEGORIES = [
+  { name: 'Incident',     value: 47, fill: '#DC2626', icon: AlertOctagon },
+  { name: 'Request',      value: 84, fill: '#C8622E', icon: Inbox },
+  { name: 'Problem',      value: 12, fill: '#D97706', icon: AlertCircle },
+  { name: 'Change',       value: 23, fill: '#7C3AED', icon: GitPullRequest },
+];
+
+const OS_DISTRIBUTION = [
+  { name: 'Windows Server 2022', value: 142, fill: '#0369A1' },
+  { name: 'Ubuntu 22.04 LTS',    value: 98,  fill: '#EA580C' },
+  { name: 'RHEL 9',              value: 56,  fill: '#B91C1C' },
+  { name: 'Debian 12',           value: 34,  fill: '#A30A55' },
+  { name: 'VMware ESXi 8',       value: 28,  fill: '#16A34A' },
+  { name: 'Other',               value: 17,  fill: '#6B6458' },
+];
+
+const SUPPLIERS_DEMO = [
+  { name: 'Cisco Systems',  spend: 248000, contracts: 8, color: '#1D4ED8' },
+  { name: 'Dell EMC',       spend: 195000, contracts: 5, color: '#2563EB' },
+  { name: 'Fortinet',       spend: 142000, contracts: 4, color: '#D97706' },
+  { name: 'HPE',            spend: 118000, contracts: 6, color: '#16A34A' },
+  { name: 'Aruba Networks', spend:  87500, contracts: 3, color: '#EA580C' },
+];
+
+const KB_ARTICLES = [
+  { title: 'Resetting BGP neighbor sessions on Cisco IOS',          views: 1247, category: 'Networking' },
+  { title: 'How to escalate a P1 incident',                          views:  982, category: 'Process'    },
+  { title: 'Troubleshooting Fortinet IPSec tunnel drops',            views:  834, category: 'Security'   },
+  { title: 'Standard onboarding checklist — new financial site',     views:  611, category: 'Operations' },
+  { title: 'Backup verification procedure (Veeam)',                  views:  478, category: 'Backup'     },
+];
+
+const SATISFACTION = {
+  score: 4.6, max: 5,
+  responses: 248,
+  breakdown: [
+    { stars: 5, count: 168, color: '#16A34A' },
+    { stars: 4, count: 52,  color: '#65A30D' },
+    { stars: 3, count: 18,  color: '#D97706' },
+    { stars: 2, count: 7,   color: '#EA580C' },
+    { stars: 1, count: 3,   color: '#DC2626' },
+  ],
+};
+
+const MAINTENANCE_CALENDAR = [
+  { date: '2026-05-09', time: '02:00', title: 'Core router IOS upgrade — HQ',           type: 'Change',  duration: '2h', tech: 'A. Sharma'  },
+  { date: '2026-05-12', time: '23:00', title: 'Fortinet HA failover test',                type: 'Change',  duration: '1h', tech: 'P. Iyer'    },
+  { date: '2026-05-14', time: '04:00', title: 'PostgreSQL minor version patch',           type: 'Change',  duration: '30m', tech: 'R. Mehta'  },
+  { date: '2026-05-18', time: '01:00', title: 'Datacenter UPS battery replacement',       type: 'Maint.',  duration: '4h', tech: 'External'   },
+  { date: '2026-05-22', time: '22:00', title: 'Aruba switch firmware upgrade — Branch 4', type: 'Change',  duration: '90m', tech: 'A. Sharma' },
+];
+
+const CONTRACT_DEMO = [
+  { vendor: 'Cisco Systems',  type: 'Maintenance', expires: '2026-06-12', value: 48000, days: 36 },
+  { vendor: 'Fortinet',       type: 'License',     expires: '2026-07-01', value: 22000, days: 55 },
+  { vendor: 'Dell EMC',       type: 'Hardware',    expires: '2026-08-15', value: 95000, days: 100 },
+  { vendor: 'HPE iLO',        type: 'Support',     expires: '2026-05-20', value: 12500, days: 13 },
+  { vendor: 'Aruba Networks', type: 'Subscription',expires: '2026-09-30', value: 31200, days: 146 },
+];
+
+const LICENSE_DEMO = [
+  { name: 'Microsoft Windows Server', used: 142, total: 200, color: '#0369A1' },
+  { name: 'VMware vSphere',           used: 88,  total: 100, color: '#2563EB' },
+  { name: 'Red Hat Enterprise Linux', used: 47,  total: 50,  color: '#B91C1C' },
+  { name: 'Cisco Anyconnect',         used: 312, total: 500, color: '#1D4ED8' },
+  { name: 'Veeam Backup',             used: 24,  total: 30,  color: '#16A34A' },
+];
+
+const SLA_DEMO = [
+  { metric: 'Critical incidents resolved < 1h', target: 95, actual: 97 },
+  { metric: 'Standard tickets resolved < 4h',   target: 85, actual: 91 },
+  { metric: 'First response < 15m',             target: 90, actual: 88 },
+];
+
+function pct(num: number, den: number) {
+  return den === 0 ? 0 : Math.round((num / den) * 100);
+}
+
+function ServiceDeskTab({
+  tasks, drifts, assets, devices,
+}: { tasks: ConfigTask[]; drifts: any[]; assets: any[]; devices: any[] }) {
+  // Treat config-tasks as tickets
+  const tickets = tasks;
+  const open    = tickets.filter(t => t.status !== 'Resolved' && t.status !== 'Done');
+  const pending = tickets.filter(t => t.status === 'Pending');
+  const inProg  = tickets.filter(t => t.status === 'In Progress' || t.status === 'InProgress');
+  const resolved = tickets.filter(t => t.status === 'Resolved' || t.status === 'Done');
+
+  const byPriority = ['High','Medium','Low'].map(p => ({
+    name:  p,
+    value: tickets.filter(t => t.priority === p).length,
+    fill:  PRIORITY_COLORS[p],
+  })).filter(d => d.value > 0);
+
+  // Asset lifecycle from real `assets` table — bucket by status
+  const lifecycleBuckets: Record<string, number> = {
+    Production: 0, Stock: 0, Maintenance: 0, Retired: 0,
+  };
+  for (const a of assets) {
+    const s = (a.status || '').toLowerCase();
+    if (s.includes('active') || s.includes('production') || s.includes('online')) lifecycleBuckets.Production++;
+    else if (s.includes('stock') || s.includes('reserved')) lifecycleBuckets.Stock++;
+    else if (s.includes('maint') || s.includes('repair') || s.includes('warning')) lifecycleBuckets.Maintenance++;
+    else if (s.includes('retired') || s.includes('decom') || s.includes('offline')) lifecycleBuckets.Retired++;
+    else lifecycleBuckets.Production++;
+  }
+  const lifecycleData = [
+    { name: 'Production',  value: lifecycleBuckets.Production,  fill: '#16A34A' },
+    { name: 'In Stock',    value: lifecycleBuckets.Stock,       fill: '#C8622E' },
+    { name: 'Maintenance', value: lifecycleBuckets.Maintenance, fill: '#D97706' },
+    { name: 'Retired',     value: lifecycleBuckets.Retired,     fill: '#6B6458' },
+  ].filter(d => d.value > 0);
+  const totalAssets = assets.length || 1;
+
+  const totalContractValue = CONTRACT_DEMO.reduce((s, c) => s + c.value, 0);
+  const expiringSoon = CONTRACT_DEMO.filter(c => c.days <= 30);
+
+  const slaAvg = Math.round(SLA_DEMO.reduce((s, m) => s + m.actual, 0) / SLA_DEMO.length);
+
+  // Technician workload — group open tickets by assigned_to
+  const workloadMap: Record<string, number> = {};
+  for (const t of open) {
+    const who = (t.assigned_to || 'Unassigned').trim() || 'Unassigned';
+    workloadMap[who] = (workloadMap[who] || 0) + 1;
+  }
+  const workload = Object.entries(workloadMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([name, count]) => ({
+      name,
+      count,
+      initials: name === 'Unassigned' ? '—' : name.split(/\s+/).map(s => s[0]).join('').slice(0, 2).toUpperCase(),
+    }));
+  const workloadMax = workload.reduce((m, w) => Math.max(m, w.count), 1);
+
+  // Ticket Evolution — synthesize a realistic 14-day trend (demo).
+  // Anchors the most recent day to the real open/resolved counts so the chart
+  // always lands at today's numbers.
+  const ticketEvolution = (() => {
+    const days = 14;
+    const todayOpened   = open.length;
+    const todayResolved = resolved.length;
+    const out: { day: string; opened: number; resolved: number }[] = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const t = (days - 1 - i) / (days - 1); // 0 → 1 across the window
+      // Slight wave + linear tend toward "today" values
+      const wave = Math.sin(i * 0.9) * 0.6;
+      out.push({
+        day: format(d, 'MMM d'),
+        opened:   Math.max(0, Math.round((todayOpened   + 4) * (0.6 + 0.4 * t) + wave + 2)),
+        resolved: Math.max(0, Math.round((todayResolved + 3) * (0.5 + 0.5 * t) + wave + 1)),
+      });
+    }
+    return out;
+  })();
+
+  return (
+    <div className="space-y-7">
+      {/* ── Top stat row ─────────────────────────────────────────────── */}
+      <div>
+        <Kicker>Helpdesk · Tickets</Kicker>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Open Tickets"  value={open.length}     icon={Inbox}      accentColor="#C8622E"
+            trend={open.length > 0 ? 'up' : 'neutral'} trendLabel={`${pending.length} pending`} />
+          <StatCard label="In Progress"   value={inProg.length}   icon={TimerReset} accentColor="#D97706" trendLabel="Being worked on" />
+          <StatCard label="Resolved"      value={resolved.length} icon={CheckCircle2} accentColor="#16A34A" trend="up" trendLabel="This period" />
+          <StatCard label="SLA Compliance" value={`${slaAvg}%`}    icon={Award}      accentColor="#7C3AED" trend={slaAvg >= 90 ? 'up' : 'down'} trendLabel="Target: 90%" />
+        </div>
+      </div>
+
+      {/* ── Tickets + Lifecycle (two columns) ────────────────────────── */}
+      <div className="grid lg:grid-cols-2 gap-5">
+        {/* Tickets by priority + status mix */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Headphones className="h-4 w-4" style={{ color: ACC }} />
+                  Service Desk Queue
+                </CardTitle>
+                <CardDescription>Live config tasks treated as tickets.</CardDescription>
+              </div>
+              <Link to="/configurations" className="text-[11px] font-semibold" style={{ color: ACC }}>View all →</Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-5">
+              {/* Priority donut */}
+              <div className="relative">
+                <ResponsiveContainer width="100%" height={170}>
+                  <PieChart>
+                    <Pie data={byPriority.length ? byPriority : [{ name: 'No tickets', value: 1, fill: '#E8E1D8' }]}
+                      cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={3} dataKey="value">
+                      {(byPriority.length ? byPriority : [{ fill: '#E8E1D8' }]).map((d, i) => (
+                        <Cell key={i} fill={d.fill} stroke="none" />
+                      ))}
+                    </Pie>
+                    <Tooltip {...WarmTooltip} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-[1.7rem] font-semibold leading-none" style={{ fontFamily: FONT_D, color: TEXT }}>
+                    {tickets.length}
+                  </span>
+                  <span className="text-[10px] mt-1 uppercase tracking-wider" style={{ color: DIM }}>Total</span>
+                </div>
+              </div>
+              {/* Priority legend + counts */}
+              <div className="flex flex-col justify-center gap-3">
+                {['High','Medium','Low'].map(p => {
+                  const count = tickets.filter(t => t.priority === p).length;
+                  return (
+                    <div key={p} className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: PRIORITY_COLORS[p] }} />
+                        <span className="text-[12.5px] font-medium" style={{ color: TEXT2 }}>{p} priority</span>
+                      </div>
+                      <span className="text-[13px] font-semibold tabular-nums" style={{ fontFamily: FONT_M, color: TEXT }}>
+                        {count}
+                      </span>
+                    </div>
+                  );
+                })}
+                <div className="mt-2 pt-3" style={{ borderTop: `1px solid ${BDR}` }}>
+                  <div className="flex items-center justify-between text-[11px]" style={{ color: TEXT3 }}>
+                    <span>Avg resolution</span>
+                    <span className="font-semibold" style={{ color: TEXT }}>2.4 h</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] mt-1" style={{ color: TEXT3 }}>
+                    <span>First response</span>
+                    <span className="font-semibold" style={{ color: TEXT }}>11 m</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent tickets list */}
+            <div className="mt-5 pt-4" style={{ borderTop: `1px solid ${BDR}` }}>
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.13em] mb-3" style={{ color: DIM }}>
+                Recent tickets
+              </p>
+              <div className="space-y-2">
+                {tickets.slice(0, 4).map(t => (
+                  <div key={t.id} className="flex items-center gap-3 py-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full shrink-0"
+                      style={{ background: PRIORITY_COLORS[t.priority || 'Medium'] || DIM }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12.5px] font-medium truncate" style={{ color: TEXT }}>{t.title}</p>
+                      <p className="text-[10.5px]" style={{ color: DIM }}>
+                        {t.assigned_to || 'Unassigned'} · {t.priority || '—'}
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="text-[10px]">{t.status}</Badge>
+                  </div>
+                ))}
+                {tickets.length === 0 && (
+                  <p className="text-[12px] text-center py-4" style={{ color: DIM }}>No tickets in the queue.</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Asset lifecycle */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-4 w-4" style={{ color: ACC }} />
+              Asset Lifecycle
+            </CardTitle>
+            <CardDescription>Distribution of {assets.length} CIs by lifecycle state.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-5 items-center">
+              <div className="relative">
+                <ResponsiveContainer width="100%" height={190}>
+                  <PieChart>
+                    <Pie data={lifecycleData.length ? lifecycleData : [{ name: 'No data', value: 1, fill: '#E8E1D8' }]}
+                      cx="50%" cy="50%" innerRadius={56} outerRadius={86} paddingAngle={2} dataKey="value">
+                      {(lifecycleData.length ? lifecycleData : [{ fill: '#E8E1D8' }]).map((d, i) => (
+                        <Cell key={i} fill={d.fill} stroke="none" />
+                      ))}
+                    </Pie>
+                    <Tooltip {...WarmTooltip} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-[1.65rem] font-semibold leading-none" style={{ fontFamily: FONT_D, color: TEXT }}>
+                    {assets.length}
+                  </span>
+                  <span className="text-[10px] mt-1 uppercase tracking-wider" style={{ color: DIM }}>Assets</span>
+                </div>
+              </div>
+              <div className="space-y-2.5">
+                {lifecycleData.map(d => (
+                  <div key={d.name}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full" style={{ background: d.fill }} />
+                        <span className="text-[12px] font-medium" style={{ color: TEXT2 }}>{d.name}</span>
+                      </div>
+                      <span className="text-[12px] font-semibold tabular-nums" style={{ fontFamily: FONT_M, color: TEXT }}>
+                        {d.value}
+                      </span>
+                    </div>
+                    <div className="h-1 rounded-full overflow-hidden" style={{ background: '#F0EAE0' }}>
+                      <div className="h-full rounded-full" style={{ background: d.fill, width: `${pct(d.value, totalAssets)}%` }} />
+                    </div>
+                  </div>
+                ))}
+                {lifecycleData.length === 0 && (
+                  <p className="text-[12px]" style={{ color: DIM }}>No asset data — import CMDB to see lifecycle.</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Problems & Changes mini strip ─────────────────────────────── */}
+      <div>
+        <Kicker>ITIL · Problems &amp; Changes</Kicker>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Incidents Today"   value={TICKET_CATEGORIES[0].value} icon={AlertOctagon}    accentColor="#DC2626" trendLabel="3 escalated" />
+          <StatCard label="Active Problems"   value={TICKET_CATEGORIES[2].value} icon={AlertCircle}     accentColor="#D97706" trendLabel="Root-cause analysis" />
+          <StatCard label="Pending Changes"   value={TICKET_CATEGORIES[3].value} icon={GitPullRequest}  accentColor="#7C3AED" trendLabel="CAB approval queue" />
+          <StatCard label="Maintenance Windows" value={MAINTENANCE_CALENDAR.length} icon={CalendarClock} accentColor="#0891B2" trendLabel="Next 30 days" />
+        </div>
+      </div>
+
+      {/* ── Ticket Evolution + Technician Workload ───────────────────── */}
+      <div className="grid lg:grid-cols-[1.4fr_1fr] gap-5">
+        {/* Ticket Evolution — 14-day trend */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" style={{ color: ACC }} />
+                  Ticket Evolution
+                </CardTitle>
+                <CardDescription>Inbound vs resolved tickets over the last 14 days.</CardDescription>
+              </div>
+              <Badge variant="outline" className="text-[10px]">14d</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={ticketEvolution} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="te-open" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%"   stopColor={ACC}     stopOpacity={0.3} />
+                    <stop offset="100%" stopColor={ACC}     stopOpacity={0}   />
+                  </linearGradient>
+                  <linearGradient id="te-res" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%"   stopColor="#16A34A" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#16A34A" stopOpacity={0}    />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="#F0EAE0" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="day" tickLine={false} axisLine={false}
+                  tick={{ fontSize: 10, fill: DIM, fontFamily: FONT_M }} />
+                <YAxis tickLine={false} axisLine={false}
+                  tick={{ fontSize: 10, fill: DIM, fontFamily: FONT_M }} />
+                <Tooltip {...WarmTooltip} />
+                <Area type="monotone" dataKey="opened"   stroke={ACC}      strokeWidth={2} fill="url(#te-open)" />
+                <Area type="monotone" dataKey="resolved" stroke="#16A34A"  strokeWidth={2} fill="url(#te-res)"  />
+              </AreaChart>
+            </ResponsiveContainer>
+            <div className="flex items-center gap-5 mt-2 px-1 text-[11px]" style={{ color: TEXT3 }}>
+              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: ACC }} />Opened</span>
+              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" />Resolved</span>
+              <span className="ml-auto text-[10px]" style={{ color: DIM }}>Demo trend</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Technician Workload */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-4 w-4" style={{ color: ACC }} />
+              Technician Workload
+            </CardTitle>
+            <CardDescription>Open tickets per assignee.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {workload.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <User className="h-8 w-8 mb-2" style={{ color: DIM, opacity: 0.4 }} />
+                <p className="text-[12px]" style={{ color: DIM }}>No assigned tickets yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {workload.map(w => {
+                  const width = pct(w.count, workloadMax);
+                  return (
+                    <div key={w.name}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                            style={{ background: `linear-gradient(135deg, ${ACC} 0%, #A84E24 100%)` }}>
+                            {w.initials}
+                          </div>
+                          <span className="text-[12px] font-medium truncate max-w-[160px]" style={{ color: TEXT2 }}>{w.name}</span>
+                        </div>
+                        <span className="text-[12px] font-semibold tabular-nums" style={{ fontFamily: FONT_M, color: TEXT }}>
+                          {w.count}
+                        </span>
+                      </div>
+                      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#F0EAE0' }}>
+                        <div className="h-full rounded-full" style={{ background: ACC, width: `${width}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Tickets by Category + Operating Systems + Suppliers ───────── */}
+      <div className="grid lg:grid-cols-3 gap-5">
+        {/* Tickets by Category */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" style={{ color: ACC }} />
+                Tickets by Category
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px]">Demo</Badge>
+            </div>
+            <CardDescription>ITIL ticket type distribution.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="relative">
+              <ResponsiveContainer width="100%" height={170}>
+                <PieChart>
+                  <Pie data={TICKET_CATEGORIES} cx="50%" cy="50%" innerRadius={48} outerRadius={75}
+                    paddingAngle={3} dataKey="value">
+                    {TICKET_CATEGORIES.map((d, i) => <Cell key={i} fill={d.fill} stroke="none" />)}
+                  </Pie>
+                  <Tooltip {...WarmTooltip} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-[1.5rem] font-semibold leading-none" style={{ fontFamily: FONT_D, color: TEXT }}>
+                  {TICKET_CATEGORIES.reduce((s, c) => s + c.value, 0)}
+                </span>
+                <span className="text-[9.5px] mt-0.5 uppercase tracking-wider" style={{ color: DIM }}>Total</span>
+              </div>
+            </div>
+            <div className="mt-3 space-y-2">
+              {TICKET_CATEGORIES.map(c => {
+                const Icon = c.icon;
+                return (
+                  <div key={c.name} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-3.5 w-3.5" style={{ color: c.fill }} />
+                      <span className="text-[12px]" style={{ color: TEXT2 }}>{c.name}</span>
+                    </div>
+                    <span className="text-[12px] font-semibold tabular-nums" style={{ fontFamily: FONT_M, color: TEXT }}>
+                      {c.value}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Operating Systems */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Server className="h-4 w-4" style={{ color: ACC }} />
+                Operating Systems
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px]">{OS_DISTRIBUTION.reduce((s, o) => s + o.value, 0)} hosts</Badge>
+            </div>
+            <CardDescription>Distribution across the estate.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2.5">
+              {OS_DISTRIBUTION.map(o => {
+                const total = OS_DISTRIBUTION.reduce((s, x) => s + x.value, 0);
+                const p = pct(o.value, total);
+                return (
+                  <div key={o.name}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11.5px] truncate" style={{ color: TEXT2 }}>{o.name}</span>
+                      <span className="text-[11.5px] tabular-nums" style={{ fontFamily: FONT_M, color: TEXT3 }}>
+                        <span className="font-semibold" style={{ color: TEXT }}>{o.value}</span>
+                        <span style={{ color: DIM }}> · {p}%</span>
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#F0EAE0' }}>
+                      <div className="h-full rounded-full" style={{ background: o.fill, width: `${p}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Suppliers */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Truck className="h-4 w-4" style={{ color: ACC }} />
+                Top Suppliers
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px]">By spend</Badge>
+            </div>
+            <CardDescription>Vendor relationships and YTD spend.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {SUPPLIERS_DEMO.map(s => (
+                <div key={s.name} className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-7 w-7 rounded-lg shrink-0 flex items-center justify-center text-[10px] font-bold text-white"
+                      style={{ background: s.color }}>
+                      {s.name.split(/\s+/).map(w => w[0]).join('').slice(0, 2)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-semibold truncate" style={{ color: TEXT }}>{s.name}</p>
+                      <p className="text-[10px]" style={{ color: DIM }}>{s.contracts} active contracts</p>
+                    </div>
+                  </div>
+                  <span className="text-[12px] font-semibold tabular-nums" style={{ fontFamily: FONT_M, color: TEXT }}>
+                    ${(s.spend/1000).toFixed(0)}k
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── SLA Performance ──────────────────────────────────────────── */}
+      <div>
+        <SectionHeader title="SLA Performance" desc="Helpdesk targets vs actuals (demo metrics)." />
+        <Card>
+          <CardContent className="pt-5">
+            <div className="grid sm:grid-cols-3 gap-5">
+              {SLA_DEMO.map(m => {
+                const pass = m.actual >= m.target;
+                const color = pass ? '#16A34A' : '#DC2626';
+                return (
+                  <div key={m.metric} className="rounded-xl p-4" style={{ background: '#FDFAF7', border: `1px solid ${BDR}` }}>
+                    <p className="text-[11px] mb-3" style={{ color: TEXT3 }}>{m.metric}</p>
+                    <div className="flex items-baseline justify-between mb-2">
+                      <span className="text-[1.7rem] font-semibold leading-none" style={{ fontFamily: FONT_D, color }}>
+                        {m.actual}%
+                      </span>
+                      <span className="text-[11px]" style={{ color: DIM }}>Target {m.target}%</span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#F0EAE0' }}>
+                      <div className="h-full rounded-full" style={{ background: color, width: `${m.actual}%` }} />
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-2.5 text-[11px] font-medium" style={{ color }}>
+                      {pass ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                      {pass ? 'Meeting target' : 'Below target'}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Satisfaction + Knowledge Base + Maintenance Calendar ──────── */}
+      <div className="grid lg:grid-cols-3 gap-5">
+        {/* Customer Satisfaction */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Smile className="h-4 w-4" style={{ color: ACC }} />
+                Customer Satisfaction
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px]">Demo</Badge>
+            </div>
+            <CardDescription>Post-resolution survey rating.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center mb-5 pb-4" style={{ borderBottom: `1px solid ${BDR}` }}>
+              <p className="text-[3.2rem] font-semibold leading-none" style={{ fontFamily: FONT_D, color: ACC }}>
+                {SATISFACTION.score.toFixed(1)}
+              </p>
+              <div className="flex items-center justify-center gap-1 mt-2">
+                {[1,2,3,4,5].map(i => (
+                  <Star key={i} className="h-4 w-4"
+                    fill={i <= Math.round(SATISFACTION.score) ? ACC : 'none'}
+                    style={{ color: i <= Math.round(SATISFACTION.score) ? ACC : '#E8E1D8' }}
+                    strokeWidth={1.5} />
+                ))}
+              </div>
+              <p className="text-[11px] mt-2" style={{ color: DIM }}>
+                Based on <span style={{ color: TEXT, fontWeight: 600 }}>{SATISFACTION.responses}</span> responses
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              {SATISFACTION.breakdown.map(b => {
+                const p = pct(b.count, SATISFACTION.responses);
+                return (
+                  <div key={b.stars} className="flex items-center gap-2.5">
+                    <span className="text-[10.5px] font-semibold w-3 tabular-nums" style={{ color: TEXT3 }}>{b.stars}★</span>
+                    <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: '#F0EAE0' }}>
+                      <div className="h-full rounded-full" style={{ background: b.color, width: `${p}%` }} />
+                    </div>
+                    <span className="text-[10.5px] tabular-nums w-8 text-right" style={{ fontFamily: FONT_M, color: TEXT3 }}>
+                      {b.count}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Knowledge Base */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4" style={{ color: ACC }} />
+                Knowledge Base
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px]">Demo</Badge>
+            </div>
+            <CardDescription>Most-viewed articles &amp; runbooks.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ color: DIM }} />
+              <input
+                type="text"
+                placeholder="Search articles…"
+                className="w-full h-9 pl-9 pr-3 rounded-lg text-[12.5px] outline-none"
+                style={{ background: '#FDFAF7', border: `1px solid ${BDR}`, color: TEXT2 }}
+                onFocus={e => (e.target.style.borderColor = ACC)}
+                onBlur={e  => (e.target.style.borderColor = BDR)}
+              />
+            </div>
+            <div className="space-y-2.5">
+              {KB_ARTICLES.map(a => (
+                <div key={a.title} className="flex items-start gap-2.5 py-1.5 cursor-pointer rounded-md px-1 -mx-1"
+                  onMouseEnter={e => (e.currentTarget.style.background = '#F0EAE0')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                  <FileText className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: ACC }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] leading-tight font-medium truncate" style={{ color: TEXT }}>{a.title}</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: DIM }}>
+                      {a.category} · <span className="tabular-nums" style={{ fontFamily: FONT_M }}>{a.views.toLocaleString()}</span> views
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Maintenance Calendar */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <CalendarClock className="h-4 w-4" style={{ color: ACC }} />
+                Maintenance Calendar
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px]">Next 30d</Badge>
+            </div>
+            <CardDescription>Upcoming change windows &amp; planned outages.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {MAINTENANCE_CALENDAR.map(m => {
+                const d = new Date(m.date);
+                const day  = d.getDate();
+                const mon  = d.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+                return (
+                  <div key={m.title} className="flex items-start gap-3">
+                    <div className="flex flex-col items-center justify-center shrink-0 rounded-lg px-2 py-1 text-center"
+                      style={{ background: '#FAE8DC', border: `1px solid #E8C4AA`, minWidth: 44 }}>
+                      <span className="text-[8.5px] font-bold leading-none" style={{ color: ACC, letterSpacing: '0.05em' }}>{mon}</span>
+                      <span className="text-[15px] font-semibold leading-none mt-0.5" style={{ fontFamily: FONT_D, color: TEXT }}>{day}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-medium leading-snug" style={{ color: TEXT }}>{m.title}</p>
+                      <div className="flex items-center gap-2 mt-1 text-[10px]" style={{ color: DIM }}>
+                        <span style={{ fontFamily: FONT_M }}>{m.time}</span>
+                        <span>·</span>
+                        <span>{m.duration}</span>
+                        <span>·</span>
+                        <span className="truncate">{m.tech}</span>
+                      </div>
+                    </div>
+                    <Badge
+                      variant="secondary"
+                      className="text-[9.5px] shrink-0"
+                      style={{
+                        background: m.type === 'Change' ? '#EDE4F6' : '#FAE8DC',
+                        color:      m.type === 'Change' ? '#7C3AED' : ACC,
+                      }}
+                    >
+                      {m.type}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Contracts & Licenses (two columns) ───────────────────────── */}
+      <div className="grid lg:grid-cols-[1.15fr_1fr] gap-5">
+        {/* Contracts expiring */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" style={{ color: ACC }} />
+                  Contracts &amp; Warranties
+                </CardTitle>
+                <CardDescription>
+                  Total value <span style={{ color: TEXT, fontWeight: 600 }}>${(totalContractValue/1000).toFixed(0)}k</span>
+                  &nbsp;· {expiringSoon.length} expiring in 30 days
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="text-[10px]">Demo</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2.5">
+              {CONTRACT_DEMO.map(c => {
+                const urgent = c.days <= 30;
+                const dot = urgent ? '#DC2626' : c.days <= 90 ? '#D97706' : '#16A34A';
+                return (
+                  <div key={c.vendor} className="flex items-center gap-3 py-2 px-3 rounded-lg"
+                    style={{ background: urgent ? 'rgba(220,38,38,0.04)' : '#FDFAF7', border: `1px solid ${urgent ? 'rgba(220,38,38,0.18)' : BDR}` }}>
+                    <span className="h-2 w-2 rounded-full shrink-0" style={{ background: dot }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12.5px] font-semibold truncate" style={{ color: TEXT }}>{c.vendor}</p>
+                      <p className="text-[10.5px]" style={{ color: DIM }}>{c.type} · expires {c.expires}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[12px] font-semibold tabular-nums" style={{ fontFamily: FONT_M, color: TEXT }}>
+                        ${(c.value/1000).toFixed(1)}k
+                      </p>
+                      <p className="text-[10px] font-medium" style={{ color: dot }}>{c.days}d</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* License compliance */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-4 w-4" style={{ color: ACC }} />
+                  License Compliance
+                </CardTitle>
+                <CardDescription>Software license usage across the estate.</CardDescription>
+              </div>
+              <Badge variant="outline" className="text-[10px]">Demo</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3.5">
+              {LICENSE_DEMO.map(l => {
+                const usage = pct(l.used, l.total);
+                const danger = usage >= 95;
+                const warn   = usage >= 80;
+                const color  = danger ? '#DC2626' : warn ? '#D97706' : l.color;
+                return (
+                  <div key={l.name}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[12px] font-medium truncate" style={{ color: TEXT2 }}>{l.name}</span>
+                      <span className="text-[11px] tabular-nums" style={{ fontFamily: FONT_M, color: TEXT3 }}>
+                        <span className="font-semibold" style={{ color: TEXT }}>{l.used}</span>
+                        <span style={{ color: DIM }}>/{l.total}</span>
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden relative" style={{ background: '#F0EAE0' }}>
+                      <div className="h-full rounded-full transition-all" style={{ background: color, width: `${usage}%` }} />
+                    </div>
+                    {danger && (
+                      <p className="text-[10px] mt-1 flex items-center gap-1" style={{ color: '#DC2626' }}>
+                        <AlertCircle className="h-3 w-3" /> Near limit — request additional seats
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Financial summary strip ──────────────────────────────────── */}
+      <div>
+        <SectionHeader title="Financial Overview" desc="Aggregated CMDB value and operational spend (demo)." />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: 'Total Asset Value',     value: '$2.4M', icon: DollarSign, accentColor: '#16A34A', trend: 'up'   as const, trendLabel: '+8% YoY' },
+            { label: 'Active Contracts',      value: CONTRACT_DEMO.length, icon: FileText, accentColor: '#C8622E', trendLabel: `$${(totalContractValue/1000).toFixed(0)}k committed` },
+            { label: 'Devices Under Support', value: devices.length, icon: Wrench,    accentColor: '#7C3AED', trendLabel: `${drifts.length} need attention` },
+            { label: 'Expiring < 30 days',    value: expiringSoon.length, icon: Calendar, accentColor: '#DC2626', trend: expiringSoon.length > 0 ? 'down' as const : 'neutral' as const, trendLabel: 'Action required' },
+          ].map(s => <StatCard key={s.label} {...s} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Dashboard ──────────────────────────────────────────────────────── */
 export function Dashboard() {
   const [drifts,      setDrifts]      = useState<any[]>([]);
   const [assetsCount, setAssetsCount] = useState(0);
+  const [assets,      setAssets]      = useState<any[]>([]);
   const [devices,     setDevices]     = useState<any[]>([]);
   const [auditLogs,   setAuditLogs]   = useState<AuditLogRow[]>([]);
+  const [tasks,       setTasks]       = useState<ConfigTask[]>([]);
   const [tab,         setTab]         = useState('overview');
   const { selectedClientId } = useClient();
 
   useEffect(() => {
     const params = selectedClientId ? { clientId: selectedClientId } : {};
-    assetsApi.list(params).then(rows => setAssetsCount(rows.length)).catch(console.error);
+    assetsApi.list(params).then(rows => { setAssetsCount(rows.length); setAssets(rows); }).catch(console.error);
     driftsApi.list({ status: 'Open' }).then(setDrifts).catch(console.error);
     infrastructureApi.list(params).then(setDevices).catch(console.error);
     auditLogsApi.list({ limit: 6 }).then(setAuditLogs).catch(console.error);
+    configTasksApi.list().then(setTasks).catch(console.error);
   }, [selectedClientId]);
 
   const typeCounts = devices.reduce((acc: Record<string, number>, d) => {
@@ -227,72 +1084,114 @@ export function Dashboard() {
 
   const totalHardware = assetsCount + devices.length;
   const activeVendors = Object.keys(vendorCounts).filter(v => v && v !== 'Unknown').length;
+  const openTaskCount = tasks.filter(t => t.status !== 'Resolved' && t.status !== 'Done').length;
+  const serverCount = (typeCounts['Server'] || 0) + (typeCounts['VM'] || 0);
+  const networkCount = devices.filter(d => ['Switch', 'Router', 'Firewall'].includes(d.type)).length;
+  const healthColor = drifts.length > 0 || openTaskCount > 0 ? '#D97706' : '#16A34A';
+  const healthLabel = drifts.length > 0 || openTaskCount > 0 ? 'Action Required' : 'Healthy';
+  const dashboardTabs = [
+    { key: 'overview', label: 'Overview', icon: BarChart3, metric: totalHardware, caption: 'Hardware estate' },
+    { key: 'network', label: 'Network', icon: Router, metric: networkCount, caption: 'Edge and fabric' },
+    { key: 'compute', label: 'Compute', icon: DatabaseIcon, metric: serverCount, caption: 'Servers and VMs' },
+    { key: 'servicedesk', label: 'Service Desk', icon: Headphones, metric: openTaskCount, caption: 'Open work queue' },
+  ];
 
   return (
     <div className="space-y-7">
+      <section className="relative overflow-hidden rounded-[2rem] border border-[#2d261c] bg-[#18140f] p-6 text-white shadow-[0_24px_80px_-36px_rgba(24,20,15,0.8)] sm:p-8">
+        <div className="absolute inset-0 opacity-75">
+          <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#c8622e]/35 blur-3xl" />
+          <div className="absolute bottom-0 left-1/3 h-48 w-48 rounded-full bg-[#f1c27d]/20 blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.12)_1px,transparent_0)] [background-size:22px_22px]" />
+        </div>
+        <div className="relative grid gap-8 xl:grid-cols-[1.35fr_1fr] xl:items-end">
+          <div>
+            <Badge className="mb-5 border-white/15 bg-white/10 text-white hover:bg-white/10">
+              FinSpot · LinkedEye · Executive cockpit
+            </Badge>
+            <h1
+              className="max-w-3xl text-4xl font-semibold tracking-[-0.04em] sm:text-5xl"
+              style={{ fontFamily: FONT_D }}
+            >
+              Executive Dashboard
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-[#d9cdbf] sm:text-base">
+              A single command surface for hardware inventory, network posture, compute capacity, drift risk, and service operations.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3 text-xs text-[#eadfd2]">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5">
+                <Package className="h-3.5 w-3.5 text-[#f1c27d]" />
+                {totalHardware} total hardware records
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 text-[#f1c27d]" />
+                {drifts.length} open drifts
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5">
+                <ShieldCheck className="h-3.5 w-3.5 text-[#f1c27d]" />
+                {activeVendors} active vendors
+              </span>
+            </div>
+          </div>
 
-      {/* ── Page header ─────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.13em] mb-1.5" style={{ color: ACC }}>
-            FinSpot · LinkedEye
-          </p>
-          <h1
-            className="text-[1.65rem] font-semibold leading-tight tracking-tight"
-            style={{ fontFamily: FONT_D, color: TEXT }}
-          >
-            Executive Dashboard
-          </h1>
-          <p className="text-[13px] mt-1" style={{ color: TEXT3 }}>
-            Real-time visibility across hardware, network, and compliance.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div
-            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold"
-            style={{ background: '#D1FAE5', color: '#065F46', border: '1px solid #A7F3D0' }}
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-            </span>
-            All Systems Healthy
-          </div>
-          <div
-            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold"
-            style={{ background: ACC_BG, color: ACC, border: `1px solid ${ACC}33` }}
-          >
-            <Clock className="h-3 w-3" />
-            Live
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-3xl border border-white/10 bg-white/[0.08] p-4 backdrop-blur">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.22em] text-[#bcae9f]">Control status</p>
+                  <p className="mt-2 text-3xl font-semibold">{healthLabel}</p>
+                  <p className="text-sm text-[#d9cdbf]">{openTaskCount} open tasks · {drifts.length} drifts</p>
+                </div>
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: healthColor }}>
+                  <Activity className="h-6 w-6" />
+                </div>
+              </div>
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-white/[0.08] p-4 backdrop-blur">
+              <p className="text-xs uppercase tracking-[0.22em] text-[#bcae9f]">Live pulse</p>
+              <div className="mt-3 flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                </span>
+                <span className="text-2xl font-semibold">Online</span>
+              </div>
+              <p className="mt-1 text-sm text-[#d9cdbf]">API, inventory, and audit feeds loaded.</p>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* ── Tabs ────────────────────────────────────────────────────── */}
       <Tabs className="w-full">
-        <TabsList
-          className="h-auto gap-0 p-0 w-auto rounded-none"
-          style={{ background: 'transparent', borderBottom: `1px solid ${BDR}` }}
-        >
-          {[
-            { key: 'overview', label: 'Overview' },
-            { key: 'network',  label: 'Network' },
-            { key: 'compute',  label: 'Compute' },
-          ].map(t => (
+        <TabsList className="grid h-auto w-full grid-cols-1 gap-3 rounded-none bg-transparent p-0 sm:grid-cols-2 xl:grid-cols-4">
+          {dashboardTabs.map(t => {
+            const Icon = t.icon;
+            const active = tab === t.key;
+            return (
             <TabsTrigger
               key={t.key}
-              active={tab === t.key}
+              active={active}
               onClick={() => setTab(t.key)}
-              className="h-9 px-5 rounded-none text-[13px] font-medium border-b-2 transition-all"
+              className="group h-auto justify-start rounded-2xl border p-4 text-left transition-all duration-200"
               style={{
-                borderBottomColor: tab === t.key ? ACC : 'transparent',
-                color: tab === t.key ? ACC : TEXT3,
-                background: 'transparent',
+                borderColor: active ? `${ACC}55` : '#eadfce',
+                background: active ? '#fff5ec' : '#fffaf3',
+                boxShadow: active ? '0 18px 45px -30px rgba(200,98,46,0.75)' : 'none',
               }}
             >
-              {t.label}
+              <div className="flex w-full items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl" style={{ background: active ? ACC : '#f2dfcb', color: active ? '#fff' : ACC }}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold" style={{ color: active ? TEXT : TEXT2 }}>{t.label}</div>
+                  <div className="mt-1 text-xs" style={{ color: TEXT3 }}>{t.metric} · {t.caption}</div>
+                </div>
+              </div>
             </TabsTrigger>
-          ))}
+            );
+          })}
         </TabsList>
 
         {/* ═══════════════════════════════════════════════════════════
@@ -335,6 +1234,75 @@ export function Dashboard() {
                 accentColor={ACC}
                 trendLabel={`${devices.length} total devices`}
               />
+            </div>
+          </div>
+
+          {/* GLPI-style Central inventory tile grid */}
+          <div>
+            <SectionHeader
+              title="Inventory · At a glance"
+              desc="Quick counters across every asset category in the CMDB."
+              action={<Badge variant="outline" className="text-[10px]">Live + demo blend</Badge>}
+            />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {[
+                { label: 'Computers',     value: assetsCount,                                                icon: Laptop,        color: '#2563EB', to: '/assets'         },
+                { label: 'Monitors',      value: 142,                                                        icon: MonitorIcon,   color: '#0369A1', to: '/assets'         },
+                { label: 'Software',      value: 386,                                                        icon: FileText,      color: '#7C3AED', to: '/assets'         },
+                { label: 'Network Eqp.',  value: devices.filter(d => ['Switch','Router','Firewall'].includes(d.type)).length, icon: Router, color: '#16A34A', to: '/infrastructure' },
+                { label: 'Servers',       value: devices.filter(d => d.type === 'Server' || d.type === 'VM').length, icon: Server, color: '#DC2626', to: '/infrastructure' },
+                { label: 'Storage',       value: devices.filter(d => d.type === 'Storage').length || 18,    icon: HardDrive,     color: '#D97706', to: '/infrastructure' },
+                { label: 'Phones',        value: 64,                                                         icon: Smartphone,    color: '#0891B2', to: '/assets'         },
+                { label: 'Printers',      value: 22,                                                         icon: Printer,       color: '#A30A55', to: '/assets'         },
+                { label: 'Racks',         value: 28,                                                         icon: Layers,        color: ACC,       to: '/racks'          },
+                { label: 'Sites',         value: 24,                                                         icon: Globe,         color: '#16A34A', to: '/sites'          },
+                { label: 'Contracts',     value: CONTRACT_DEMO.length,                                       icon: FileText,      color: '#7C3AED', to: '#'               },
+                { label: 'Suppliers',     value: SUPPLIERS_DEMO.length,                                      icon: Truck,         color: '#EA580C', to: '#'               },
+              ].map(t => {
+                const Icon = t.icon;
+                const node = (
+                  <div
+                    key={t.label}
+                    className="rounded-xl p-3.5 transition-all cursor-pointer group"
+                    style={{
+                      background: SURF,
+                      border: `1px solid ${BDR}`,
+                      boxShadow: '0 1px 3px rgba(41,37,36,0.04)',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = t.color;
+                      e.currentTarget.style.boxShadow   = `0 6px 20px -8px ${t.color}40`;
+                      e.currentTarget.style.transform   = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = BDR;
+                      e.currentTarget.style.boxShadow   = '0 1px 3px rgba(41,37,36,0.04)';
+                      e.currentTarget.style.transform   = 'translateY(0)';
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div
+                        className="flex h-7 w-7 items-center justify-center rounded-lg"
+                        style={{ background: `${t.color}14` }}
+                      >
+                        <Icon className="h-3.5 w-3.5" style={{ color: t.color }} strokeWidth={1.75} />
+                      </div>
+                      <ArrowUpRight
+                        className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ color: t.color }}
+                      />
+                    </div>
+                    <p className="text-[1.4rem] font-semibold leading-none tabular-nums"
+                      style={{ fontFamily: FONT_D, color: TEXT }}>
+                      {t.value}
+                    </p>
+                    <p className="text-[10.5px] mt-1.5 font-medium" style={{ color: TEXT3 }}>{t.label}</p>
+                  </div>
+                );
+                return t.to.startsWith('/')
+                  ? <Link key={t.label} to={t.to} className="contents">{node}</Link>
+                  : node;
+              })}
             </div>
           </div>
 
@@ -854,6 +1822,11 @@ export function Dashboard() {
               </div>
             </div>
           </div>
+        </TabsContent>
+
+        {/* ── SERVICE DESK TAB (GLPI-style) ─────────────────────────────── */}
+        <TabsContent className={tab === 'servicedesk' ? 'block space-y-7 mt-6' : 'hidden'}>
+          <ServiceDeskTab tasks={tasks} drifts={drifts} assets={assets} devices={devices} />
         </TabsContent>
       </Tabs>
     </div>

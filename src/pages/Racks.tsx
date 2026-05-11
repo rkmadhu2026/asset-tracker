@@ -29,6 +29,7 @@ import {
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { FeatureHero } from '@/components/FeatureHero';
 
 // --- Data Definitions ---
 
@@ -601,15 +602,18 @@ export function Racks() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center">
-            <Layout className="h-8 mr-3 text-primary" />
-            Rack Master Table
-          </h1>
-          <p className="text-muted-foreground mt-1">Manage data center rack infrastructure, occupancy, and environmental status.</p>
-        </div>
-        <div className="flex space-x-2 w-full sm:w-auto">
+      <FeatureHero
+        eyebrow="Data Center · Rack Management"
+        title="Rack Master Table"
+        description="Manage rack occupancy, environmental status, mounted devices, power paths, and physical connectivity."
+        icon={Layout}
+        stats={[
+          { label: 'Racks', value: racks.length, icon: Box },
+          { label: 'Devices', value: rackDevices.length, icon: Server },
+          { label: 'Avg Occupancy', value: `${Math.round(racks.reduce((acc, r) => acc + r.occupancy, 0) / racks.length)}%`, icon: Layout },
+        ]}
+        actions={
+          <>
           <Button variant="outline" className="flex-1 sm:flex-none">
             <MapPin className="w-4 h-4 mr-2" />
             Floor Map
@@ -618,8 +622,9 @@ export function Racks() {
             <Plus className="w-4 h-4 mr-2" />
             Add Rack
           </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-4" style={{ background: '#FAE8DC', borderColor: '#E8C4AA' }}>

@@ -8,7 +8,7 @@ Compact reference for OpenCode sessions. For full architecture, commands, and co
 cp .env.example .env.local   # set AUTH_BYPASS=true for local dev without JWT
 npm install
 npm run db:up                # start Postgres (docker)
-npm run db:migrate           # run SQL migrations (001→004)
+npm run db:migrate           # run SQL migrations (001→006)
 npm run dev & npm run server # terminal 1: Vite :3000  terminal 2: Express :4000
 ```
 

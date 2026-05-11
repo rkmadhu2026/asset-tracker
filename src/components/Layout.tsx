@@ -21,6 +21,11 @@ const WARM_HOVER = '#F0EAE0';
 const DIM   = '#A09688';
 const TEXT  = '#19160F';
 const TEXT2 = '#6B6458';
+const SIDEBAR_BG = '#18140F';
+const SIDEBAR_PANEL = 'rgba(255,255,255,0.07)';
+const SIDEBAR_BORDER = 'rgba(255,255,255,0.11)';
+const SIDEBAR_TEXT = '#F7F3ED';
+const SIDEBAR_DIM = '#BCAEA0';
 
 const navSections = [
   {
@@ -68,15 +73,15 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const { isAdmin } = useAuth();
 
   return (
-    <nav className="flex-1 overflow-y-auto px-2 py-4" style={{ gap: 0 }}>
+    <nav className="flex-1 overflow-y-auto px-3 py-4" style={{ gap: 0 }}>
       {navSections.map((section, si) => (
         <div key={section.label} className={si > 0 ? 'mt-5' : ''}>
           {/* Section label with thin rule */}
           <div className="flex items-center gap-2 px-3 mb-1.5">
-            <span className="h-px flex-1" style={{ background: WARM_BDR }} />
+            <span className="h-px flex-1" style={{ background: SIDEBAR_BORDER }} />
             <span
               className="text-[9.5px] font-bold uppercase tracking-[0.18em] select-none"
-              style={{ color: DIM }}
+              style={{ color: SIDEBAR_DIM }}
             >
               {section.label}
             </span>
@@ -90,13 +95,15 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                   key={item.path}
                   to={item.path}
                   onClick={onNavigate}
-                  className="relative group flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-[13px] font-medium transition-all duration-150"
+                  className="relative group flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-150"
                   style={{
-                    background: isActive ? ACC_BG : 'transparent',
-                    color: isActive ? ACC : TEXT2,
+                    background: isActive ? 'rgba(200,98,46,0.2)' : 'transparent',
+                    color: isActive ? SIDEBAR_TEXT : SIDEBAR_DIM,
+                    border: `1px solid ${isActive ? 'rgba(200,98,46,0.45)' : 'transparent'}`,
+                    boxShadow: isActive ? '0 12px 26px -18px rgba(200,98,46,0.95)' : 'none',
                   }}
-                  onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = WARM_HOVER; (e.currentTarget as HTMLElement).style.color = TEXT; }}
-                  onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = TEXT2; } }}
+                  onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = SIDEBAR_PANEL; (e.currentTarget as HTMLElement).style.color = SIDEBAR_TEXT; } }}
+                  onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = SIDEBAR_DIM; } }}
                 >
                   {/* Active left indicator */}
                   {isActive && (
@@ -107,7 +114,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                   )}
                   <item.icon
                     className="h-[14px] w-[14px] shrink-0 transition-colors"
-                    style={{ color: isActive ? ACC : undefined, opacity: isActive ? 1 : 0.6 }}
+                    style={{ color: isActive ? '#F1C27D' : undefined, opacity: isActive ? 1 : 0.72 }}
                   />
                   <span className="truncate">{item.label}</span>
                 </Link>
@@ -120,24 +127,25 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
       {isAdmin && (
         <div className="mt-5">
           <div className="flex items-center gap-2 px-3 mb-1.5">
-            <span className="h-px flex-1" style={{ background: WARM_BDR }} />
-            <span className="text-[9.5px] font-bold uppercase tracking-[0.18em] select-none" style={{ color: DIM }}>Admin</span>
+            <span className="h-px flex-1" style={{ background: SIDEBAR_BORDER }} />
+            <span className="text-[9.5px] font-bold uppercase tracking-[0.18em] select-none" style={{ color: SIDEBAR_DIM }}>Admin</span>
           </div>
           <Link
             to="/users"
             onClick={onNavigate}
-            className="relative group flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-[13px] font-medium transition-all duration-150"
+            className="relative group flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-150"
             style={{
-              background: location.pathname === '/users' ? ACC_BG : 'transparent',
-              color: location.pathname === '/users' ? ACC : TEXT2,
+              background: location.pathname === '/users' ? 'rgba(200,98,46,0.2)' : 'transparent',
+              color: location.pathname === '/users' ? SIDEBAR_TEXT : SIDEBAR_DIM,
+              border: `1px solid ${location.pathname === '/users' ? 'rgba(200,98,46,0.45)' : 'transparent'}`,
             }}
-            onMouseEnter={e => { if (location.pathname !== '/users') { (e.currentTarget as HTMLElement).style.background = WARM_HOVER; (e.currentTarget as HTMLElement).style.color = TEXT; } }}
-            onMouseLeave={e => { if (location.pathname !== '/users') { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = TEXT2; } }}
+            onMouseEnter={e => { if (location.pathname !== '/users') { (e.currentTarget as HTMLElement).style.background = SIDEBAR_PANEL; (e.currentTarget as HTMLElement).style.color = SIDEBAR_TEXT; } }}
+            onMouseLeave={e => { if (location.pathname !== '/users') { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = SIDEBAR_DIM; } }}
           >
             {location.pathname === '/users' && (
               <span className="absolute left-0 top-1/4 bottom-1/4 w-[2.5px] rounded-full" style={{ background: ACC }} />
             )}
-            <Users className="h-[14px] w-[14px] shrink-0" style={{ color: location.pathname === '/users' ? ACC : undefined, opacity: location.pathname === '/users' ? 1 : 0.6 }} />
+            <Users className="h-[14px] w-[14px] shrink-0" style={{ color: location.pathname === '/users' ? '#F1C27D' : undefined, opacity: location.pathname === '/users' ? 1 : 0.72 }} />
             <span>Users</span>
           </Link>
         </div>
@@ -156,20 +164,20 @@ function ClientSelector() {
     <div className="relative px-2">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2 transition-all duration-150 text-[12px] font-medium"
+        className="w-full flex items-center justify-between gap-2 rounded-2xl px-3 py-2.5 transition-all duration-150 text-[12px] font-medium"
         style={{
-          background: open ? ACC_BG : WARM_HOVER,
-          border: `1px solid ${open ? `${ACC}33` : WARM_BDR}`,
-          color: TEXT,
+          background: open ? 'rgba(200,98,46,0.2)' : SIDEBAR_PANEL,
+          border: `1px solid ${open ? 'rgba(200,98,46,0.45)' : SIDEBAR_BORDER}`,
+          color: SIDEBAR_TEXT,
         }}
       >
         <div className="flex items-center gap-2 min-w-0">
-          <div className="h-4 w-4 shrink-0 rounded-sm flex items-center justify-center" style={{ background: `${ACC}22` }}>
-            <Shield className="h-2.5 w-2.5" style={{ color: ACC }} />
+          <div className="h-5 w-5 shrink-0 rounded-lg flex items-center justify-center" style={{ background: 'rgba(241,194,125,0.16)' }}>
+            <Shield className="h-3 w-3" style={{ color: '#F1C27D' }} />
           </div>
           <span className="truncate">{selected?.name ?? 'All Clients'}</span>
         </div>
-        <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 transition-transform duration-200', open && 'rotate-180')} style={{ color: DIM }} />
+        <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 transition-transform duration-200', open && 'rotate-180')} style={{ color: SIDEBAR_DIM }} />
       </button>
 
       {open && (
@@ -217,7 +225,11 @@ function SidebarShell({ children, className, style, ...props }: React.HTMLAttrib
   return (
     <aside
       className={cn('flex flex-col', className)}
-      style={{ background: WARM_BG, borderRight: `1px solid ${WARM_BDR}`, ...style }}
+      style={{
+        background: `radial-gradient(circle at top left, rgba(200,98,46,0.22), transparent 32%), ${SIDEBAR_BG}`,
+        borderRight: `1px solid ${SIDEBAR_BORDER}`,
+        ...style,
+      }}
       {...props}
     >
       {children}
@@ -228,26 +240,26 @@ function SidebarShell({ children, className, style, ...props }: React.HTMLAttrib
 /* ── Logo ───────────────────────────────────────────────────────────────── */
 function SidebarLogo() {
   return (
-    <div className="flex h-[58px] shrink-0 items-center gap-3 px-4" style={{ borderBottom: `1px solid ${WARM_BDR}` }}>
+    <div className="flex h-[72px] shrink-0 items-center gap-3 px-4" style={{ borderBottom: `1px solid ${SIDEBAR_BORDER}` }}>
       <div
-        className="relative flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-xl"
+        className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
         style={{
           background: 'linear-gradient(135deg, #C8622E 0%, #A84E24 100%)',
-          boxShadow: '0 4px 14px -4px rgba(200,98,46,0.5)',
+          boxShadow: '0 18px 40px -22px rgba(200,98,46,0.95)',
         }}
       >
-        <Shield className="h-[17px] w-[17px] text-white" strokeWidth={2} />
+        <Shield className="h-5 w-5 text-white" strokeWidth={2} />
       </div>
       <div className="min-w-0">
         <p
-          className="text-[15px] font-semibold leading-none tracking-tight"
-          style={{ fontFamily: FONT_DISPLAY, color: TEXT }}
+          className="text-[17px] font-semibold leading-none tracking-tight"
+          style={{ fontFamily: FONT_DISPLAY, color: SIDEBAR_TEXT }}
         >
           Argus
         </p>
         <div className="flex items-center gap-1.5 mt-[5px]">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          <p className="text-[9.5px] font-medium uppercase tracking-wider leading-none" style={{ color: DIM }}>
+          <p className="text-[9.5px] font-medium uppercase tracking-wider leading-none" style={{ color: SIDEBAR_DIM }}>
             LinkedEye · Asset Intelligence
           </p>
         </div>
@@ -283,8 +295,8 @@ export function Layout() {
         <SidebarLogo />
 
         {/* Client context */}
-        <div className="pt-3 pb-3" style={{ borderBottom: `1px solid ${WARM_BDR}` }}>
-          <p className="px-5 mb-2 text-[9.5px] font-bold uppercase tracking-[0.16em] select-none" style={{ color: DIM }}>
+        <div className="px-2 pt-3 pb-3" style={{ borderBottom: `1px solid ${SIDEBAR_BORDER}` }}>
+          <p className="px-3 mb-2 text-[9.5px] font-bold uppercase tracking-[0.16em] select-none" style={{ color: SIDEBAR_DIM }}>
             Context
           </p>
           <ClientSelector />
@@ -293,12 +305,12 @@ export function Layout() {
         <SidebarNav />
 
         {/* User footer */}
-        <div className="shrink-0 p-2" style={{ borderTop: `1px solid ${WARM_BDR}` }}>
+        <div className="shrink-0 p-3" style={{ borderTop: `1px solid ${SIDEBAR_BORDER}` }}>
           <div
-            className="flex items-center gap-2.5 rounded-lg px-3 py-2 transition-colors group cursor-default"
-            style={{ background: 'transparent' }}
-            onMouseEnter={e => (e.currentTarget.style.background = WARM_HOVER)}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 transition-colors group cursor-default"
+            style={{ background: SIDEBAR_PANEL, border: `1px solid ${SIDEBAR_BORDER}` }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+            onMouseLeave={e => (e.currentTarget.style.background = SIDEBAR_PANEL)}
           >
             {/* Initials avatar */}
             <div
@@ -308,10 +320,10 @@ export function Layout() {
               {initials}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[12px] font-semibold truncate leading-none" style={{ color: TEXT }}>
+              <p className="text-[12px] font-semibold truncate leading-none" style={{ color: SIDEBAR_TEXT }}>
                 {user?.displayName || user?.email?.split('@')[0] || 'User'}
               </p>
-              <p className="text-[9px] uppercase font-bold mt-0.5 leading-none tracking-wide" style={{ color: DIM }}>
+              <p className="text-[9px] uppercase font-bold mt-0.5 leading-none tracking-wide" style={{ color: SIDEBAR_DIM }}>
                 {user?.role ?? 'Viewer'}
               </p>
             </div>
@@ -319,9 +331,9 @@ export function Layout() {
               onClick={signOut}
               title="Sign out"
               className="p-1 rounded-md transition-colors opacity-0 group-hover:opacity-100"
-              style={{ color: DIM }}
+              style={{ color: SIDEBAR_DIM }}
               onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
-              onMouseLeave={e => (e.currentTarget.style.color = DIM)}
+              onMouseLeave={e => (e.currentTarget.style.color = SIDEBAR_DIM)}
             >
               <LogOut className="h-3.5 w-3.5" />
             </button>
@@ -337,20 +349,20 @@ export function Layout() {
             className="absolute inset-y-0 left-0 flex w-64 shadow-2xl"
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
           >
-            <div className="flex h-[58px] items-center justify-between px-4" style={{ borderBottom: `1px solid ${WARM_BDR}` }}>
+            <div className="flex h-[72px] items-center justify-between px-4" style={{ borderBottom: `1px solid ${SIDEBAR_BORDER}` }}>
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl shrink-0"
                   style={{ background: 'linear-gradient(135deg, #C8622E 0%, #A84E24 100%)' }}
                 >
                   <Shield className="h-4 w-4 text-white" />
                 </div>
-                <p className="text-[14px] font-semibold" style={{ fontFamily: FONT_DISPLAY, color: TEXT }}>Argus</p>
+                <p className="text-[15px] font-semibold" style={{ fontFamily: FONT_DISPLAY, color: SIDEBAR_TEXT }}>Argus</p>
               </div>
-              <button onClick={() => setIsMobileMenuOpen(false)} className="p-1 rounded-md" style={{ color: TEXT2 }}>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="p-1 rounded-md" style={{ color: SIDEBAR_DIM }}>
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="pt-3 pb-3" style={{ borderBottom: `1px solid ${WARM_BDR}` }}>
+            <div className="px-2 pt-3 pb-3" style={{ borderBottom: `1px solid ${SIDEBAR_BORDER}` }}>
               <ClientSelector />
             </div>
             <SidebarNav onNavigate={() => setIsMobileMenuOpen(false)} />

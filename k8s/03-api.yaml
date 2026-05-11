@@ -18,7 +18,7 @@ spec:
       containers:
         - name: api
           image: fs-le-dev-harbor.finspot.in/argus/api:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 4000
           env:

@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { assetsApi } from '../lib/api';
 import { GoogleGenAI } from "@google/genai";
 import Markdown from 'react-markdown';
+import { FeatureHero } from '@/components/FeatureHero';
 
 const assets = [
   { 
@@ -906,12 +907,18 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Assets (Configuration Items)</h1>
-          <p className="text-muted-foreground mt-1">Comprehensive CMDB for hardware, infra, and network inventory.</p>
-        </div>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+      <FeatureHero
+        eyebrow="Inventory · CMDB"
+        title="Assets (Configuration Items)"
+        description="Comprehensive CMDB for hardware, infrastructure, ownership, lifecycle, audit, and stock intelligence."
+        icon={Package}
+        stats={[
+          { label: 'CIs', value: assetsData.length, icon: Package },
+          { label: 'Selected', value: selectedAssetIds.length, icon: ClipboardList },
+          { label: 'View', value: viewMode === 'stock' ? 'Stock' : 'Inventory', icon: Boxes },
+        ]}
+        actions={
+          <>
           <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => setIsCmdOpen(true)}>
             <Terminal className="w-4 h-4 mr-2" />
             CMD Center
@@ -959,8 +966,9 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
             <Plus className="w-4 h-4 mr-2" />
             Add Device Type
           </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <Dialog open={isAddTypeOpen} onOpenChange={setIsAddTypeOpen}>
         <DialogContent>
@@ -1837,4 +1845,3 @@ ${JSON.stringify(selectedAsset, null, 2)}`,
     </div>
   );
 }
-

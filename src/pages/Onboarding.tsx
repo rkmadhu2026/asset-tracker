@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { FeatureHero } from '@/components/FeatureHero';
 
 export function Onboarding() {
   const [workflowType, setWorkflowType] = useState<'onboarding' | 'offboarding' | 'employee'>('onboarding');
@@ -25,8 +26,17 @@ export function Onboarding() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Asset Lifecycle Workflows</h1>
+      <FeatureHero
+        eyebrow="Lifecycle · Workflow Orchestration"
+        title="Asset Lifecycle Workflows"
+        description="Guided onboarding, secure offboarding, and employee asset workflows with repeatable operational steps."
+        icon={Sparkles}
+        stats={[
+          { label: 'Workflow', value: workflowType, icon: Sparkles },
+          { label: 'Step', value: step, icon: CheckCircle2 },
+          { label: 'Monitoring', value: monitoring ? 'On' : 'Off', icon: CheckCircle2 },
+        ]}
+        actions={
         <Tabs>
           <TabsList>
             <TabsTrigger active={workflowType === 'onboarding'} onClick={() => { setWorkflowType('onboarding'); setStep(1); }}>Device Onboarding</TabsTrigger>
@@ -34,7 +44,8 @@ export function Onboarding() {
             <TabsTrigger active={workflowType === 'employee'} onClick={() => { setWorkflowType('employee'); setStep(1); }}>Employee Workflow</TabsTrigger>
           </TabsList>
         </Tabs>
-      </div>
+        }
+      />
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="col-span-2">

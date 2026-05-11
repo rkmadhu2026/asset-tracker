@@ -7,6 +7,7 @@ import {
   Play, FileCode2, Terminal, History, Search, 
   Plus, Settings, Cpu, Code, CheckCircle2, XCircle, Clock
 } from 'lucide-react';
+import { FeatureHero } from '@/components/FeatureHero';
 
 const scripts = [
   { id: 'SCR-001', name: 'Cisco_IOS_Backup.py', type: 'Backup', target: 'Cisco IOS', lastRun: '2026-04-01 14:20', status: 'Success' },
@@ -26,12 +27,18 @@ export function Automation() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Network Automation</h1>
-          <p className="text-muted-foreground mt-1">Python-based configuration builds and infrastructure automation.</p>
-        </div>
-        <div className="flex space-x-2 w-full sm:w-auto">
+      <FeatureHero
+        eyebrow="Operations · Automation"
+        title="Network Automation"
+        description="Python-based configuration builds, scripted remediation, and infrastructure automation runs."
+        icon={Terminal}
+        stats={[
+          { label: 'Scripts', value: scripts.length, icon: FileCode2 },
+          { label: 'Recent Runs', value: buildHistory.length, icon: History },
+          { label: 'Successful', value: scripts.filter(s => s.status === 'Success').length, icon: CheckCircle2 },
+        ]}
+        actions={
+          <>
           <Button variant="outline" className="flex-1 sm:flex-none">
             <Terminal className="w-4 h-4 mr-2" />
             Console
@@ -40,8 +47,9 @@ export function Automation() {
             <Plus className="w-4 h-4 mr-2" />
             New Script
           </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Python Scripts List */}

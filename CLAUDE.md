@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm install          # install dependencies
 
 # ── Frontend ─────────────────────────────────────────────────────────────────
-npm run dev          # Vite dev server on 0.0.0.0:3000 (proxies /api → localhost:4000)
+npm run dev          # Vite dev server on 0.0.0.0:3000 (strictPort — fails if 3000 taken; proxies /api → localhost:4000)
 npm run build        # production build → dist/
 npm run preview      # preview production build
 npm run lint         # TypeScript type-check only (tsc --noEmit); no ESLint/Prettier
@@ -48,7 +48,7 @@ Copy `.env.example` to `.env.local` (loaded by both Vite and the Express server 
 | `API_PORT` | Vite proxy + Express | Express listen port (default `4000`) |
 | `DATABASE_URL` | Express | Full Postgres URL — overrides `PG_*` when set |
 | `PG_HOST / PG_PORT / PG_DATABASE / PG_USER / PG_PASSWORD` | Express | Individual Postgres params (defaults: `argus`/`argus`) |
-| `CORS_ORIGIN` | Express | Allowed BROWSER origin (default `http://localhost:3001`); comma-separated for multiple |
+| `CORS_ORIGIN` | Express | Allowed BROWSER origin (default `http://localhost:3001`); comma-separated for multiple. **Default mismatches the Vite dev port (`:3000`)** — for local browser→API calls set `CORS_ORIGIN=http://localhost:3000` in `.env.local`, or use `AUTH_BYPASS=true` |
 | `AUTH_BYPASS` | Express + Vite | `true` → skip JWT verification, treat all callers as admin. **Never in production.** |
 
 The `docker-compose.yml` dev DB only auto-applies migrations 001–003 via `docker-entrypoint-initdb.d`. Always run `npm run db:migrate` after `npm run db:up` to get migrations 004–006.
@@ -67,27 +67,31 @@ The Vite dev server proxies `/api/*` → `localhost:${API_PORT}` so frontend cod
 
 ```
 server/
-  index.ts            # app entry — mounts all routers on /api/*
-  auth-jwt.ts         # JWT issue/verify helpers, password hashing
-  db.ts               # pg.Pool (DATABASE_URL or PG_* env vars)
-  audit.ts            # logAudit() — fire-and-forget INSERT to audit_logs; safe to call without await
-  middleware/auth.ts  # requireAuth / requireAdmin — JWT verification
+  index.ts             # app entry — mounts all routers on /api/*
+  auth-jwt.ts          # JWT issue/verify helpers, password hashing
+  db.ts                # pg.Pool (DATABASE_URL or PG_* env vars)
+  audit.ts             # logAudit() — fire-and-forget INSERT to audit_logs; safe to call without await
+  middleware/auth.ts   # requireAuth / requireAdmin — JWT verification
   routes/
-    auth.ts            # login, register, me endpoints
-    chats.ts           # chat message storage
-    upload.ts          # file upload → /uploads/ directory
-    users.ts           # user management
-    audit-logs.ts      # read/filter audit_logs table
+    auth.ts             # login, register, me endpoints
+    chats.ts            # chat message storage
+    upload.ts           # file upload → /uploads/ directory
+    users.ts            # user management
+    audit-logs.ts       # read/filter audit_logs table
     clients.ts, sites.ts, racks.ts, infrastructure.ts, assets.ts,
     config-tasks.ts, device-templates.ts, drifts.ts, validation-history.ts
-migrations/
-  001_initial.sql … 006_audit_logs_extend.sql
-uploads/               # uploaded files served statically at /uploads/
+  migrations/
+    001_initial.sql … 006_audit_logs_extend.sql
+uploads/                # uploaded files served statically at /uploads/
 ```
+
+**Server imports use `.js` extensions even for `.ts` source files** (e.g. `import authRouter from './routes/auth.js'`). This is required by tsx's NodeNext-style resolution — do not "fix" these to `.ts` or omit the extension.
 
 All routes are protected by `requireAuth`; admin-only mutations use `requireAdmin`. With `AUTH_BYPASS=true` all requests are treated as `admin` (bypass is logged with a warning).
 
 Health check: `GET /api/health` → `{ status: 'ok', ts: <ISO timestamp> }` (unauthenticated).
+
+File uploads: `POST /api/upload` with `FormData('file')` → `{ url, name, type }`. Files are stored under `uploads/` and served statically at `/uploads/*` (mounted in `server/index.ts`).
 
 Backend runs via `tsx` (no separate build step for dev). `tsconfig.server.json` compiles to **CommonJS** (`dist-server/`) — `"module": "ESNext"` must not be used there because `package.json` has `"type":"module"` at the repo root and `dist-server/package.json` overrides it back to `commonjs`. Do not use `import.meta` in server code.
 
@@ -158,14 +162,21 @@ When adding real backends to stub pages, wire to the existing API pattern in `sr
 - Tailwind v4 via `@tailwindcss/vite` plugin — no `tailwind.config.js`; theme tokens in `src/index.css`.
 - Several pages are very large single files (`Infrastructure.tsx` ~128 KB, `Assets.tsx` ~95 KB, `Racks.tsx` ~38 KB). Prefer in-place edits over splitting unless explicitly asked.
 - `src/lib/firestore-errors.ts` — legacy error-logging utility kept for its `ErrorInfo` structure; not Firebase-specific.
+- **Vestigial Firebase**: `firebase`, `firebase-admin`, `firebase-tools` deps and the `deploy` / `deploy:hosting` npm scripts remain in `package.json` from the old AI Studio template. The runtime auth path is JWT + Postgres only — do not wire new code through Firebase.
+
+## Docker
+
+Two parallel sets of Dockerfiles:
+- Repo root: `Dockerfile`, `Dockerfile.api` — referenced by `docker-compose.yml` (dev DB only) and ad-hoc builds.
+- `docker/`: `Dockerfile.api`, `Dockerfile.web`, `nginx/`, `nginx.conf` — used by `docker-compose.prod.yml` (`npm run compose:prod:up`) for the full stack.
 
 ## Kubernetes deployment (`k8s/`)
 
 Self-contained manifests for in-cluster deployment (Harbor registry). Apply order:
 ```
-00-namespace → 01-secrets → 02-postgres → 03-api → 04-web → 05-registry-secret → 06-api-image-importer
+00-namespace → 01-secrets → 02-postgres → 03-api → 04-web → 05-registry-secret → 06-api-image-importer → 07-ingress
 ```
-Secrets in `01-secrets.yaml` contain `<PLACEHOLDER>` values — substitute from Vault before applying. The `06-api-image-importer` job pulls the API image from Harbor into the cluster.
+Secrets in `01-secrets.yaml` contain `<PLACEHOLDER>` values — substitute from Vault before applying. The `06-api-image-importer` job pulls the API image from Harbor into the cluster. `07-ingress.yaml` exposes the web/api services via the shared `nginx-ingress` controller and reuses the wildcard `finspot-tls` secret.
 
 ## Roadmap trackers
 

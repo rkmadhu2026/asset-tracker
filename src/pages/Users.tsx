@@ -8,6 +8,7 @@ import { Select, SelectItem } from '../components/ui/select';
 import { User, Shield, Code, Eye, Search, MoreHorizontal, Mail, Calendar } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import { UserRole } from '../components/AuthProvider';
+import { FeatureHero } from '../components/FeatureHero';
 
 interface UserProfile {
   uid: string;
@@ -66,12 +67,17 @@ export function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Users Management</h1>
-          <p className="text-muted-foreground">Manage user roles and permissions across the platform.</p>
-        </div>
-      </div>
+      <FeatureHero
+        eyebrow="Admin · Access Control"
+        title="Users Management"
+        description="Manage user roles, permissions, and identity records across the platform."
+        icon={Shield}
+        stats={[
+          { label: 'Users', value: users.length, icon: User },
+          { label: 'Admins', value: users.filter(u => u.role === 'admin').length, icon: Shield },
+          { label: 'Developers', value: users.filter(u => u.role === 'developer').length, icon: Code },
+        ]}
+      />
 
       <Card>
         <CardHeader>

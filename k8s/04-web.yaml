@@ -52,7 +52,7 @@ spec:
       containers:
         - name: web
           image: fs-le-dev-harbor.finspot.in/argus/web:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
           readinessProbe:

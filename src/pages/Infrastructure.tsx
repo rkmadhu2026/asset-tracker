@@ -30,6 +30,7 @@ import { infrastructureApi, type Device } from '../lib/api';
 import ReactFlow, { Background, Controls, MiniMap, MarkerType, Handle, Position } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { GoogleGenAI, Type } from "@google/genai";
+import { FeatureHero } from '@/components/FeatureHero';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -836,7 +837,9 @@ const modelCatalog = [
     eos: '2030-12-31',
     warranty: 'Lifetime Limited',
     power: 'Max 880W',
-    mtbf: '450,000 hrs'
+    mtbf: '450,000 hrs',
+    imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Ethernet%20Switch.jpg?width=420',
+    sourceUrl: 'https://www.arubanetworks.com/products/switches/access/6300-series/',
   },
   { 
     model: '7050SX3', 
@@ -847,7 +850,9 @@ const modelCatalog = [
     eos: '2029-06-30',
     warranty: '1 Year Hardware',
     power: 'Typical 180W',
-    mtbf: '380,000 hrs'
+    mtbf: '380,000 hrs',
+    imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Network_switch.jpg?width=420',
+    sourceUrl: 'https://www.arista.com/en/products/7050x3-series',
   },
   { 
     model: 'NetEngine AR6000', 
@@ -858,7 +863,9 @@ const modelCatalog = [
     eos: '2031-01-15',
     warranty: '3 Year Standard',
     power: 'Max 350W',
-    mtbf: '520,000 hrs'
+    mtbf: '520,000 hrs',
+    imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Ethernet%20Switch.jpg?width=420',
+    sourceUrl: 'https://support.huawei.com/enterprise/en/doc/EDOC1000013597/88f2e4a/s5720-52x-li-ac',
   },
   { 
     model: 'ProLiant DL380 Gen10', 
@@ -869,7 +876,9 @@ const modelCatalog = [
     eos: '2028-11-20',
     warranty: '3-3-3 NBD',
     power: '800W Platinum',
-    mtbf: '280,000 hrs'
+    mtbf: '280,000 hrs',
+    imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/HP%20ProLiant%20DL360%20and%20two%20DL380.jpg?width=420',
+    sourceUrl: 'https://www.hpe.com/us/en/servers/proliant-dl380.html',
   },
   { 
     model: 'PowerEdge R740', 
@@ -880,9 +889,35 @@ const modelCatalog = [
     eos: '2029-03-15',
     warranty: 'ProSupport 24x7',
     power: '750W Titanium',
-    mtbf: '310,000 hrs'
+    mtbf: '310,000 hrs',
+    imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Dell%20PowerEdge%20servers.jpg?width=420',
+    sourceUrl: 'https://www.dell.com/support/home/en-in/product-support/product/poweredge-r740/overview',
   },
 ];
+
+const modelVisuals = {
+  switch: 'https://commons.wikimedia.org/wiki/Special:FilePath/Ethernet%20Switch.jpg?width=220',
+  ciscoSwitch: 'https://commons.wikimedia.org/wiki/Special:FilePath/Network_switch.jpg?width=220',
+  firewall: 'https://commons.wikimedia.org/wiki/Special:FilePath/Network_firewall.svg?width=220',
+  server: 'https://commons.wikimedia.org/wiki/Special:FilePath/HP%20ProLiant%20DL360%20and%20two%20DL380.jpg?width=220',
+  ubuntu: 'https://commons.wikimedia.org/wiki/Special:FilePath/Ubuntu-logo-2022.svg?width=220',
+  windows: 'https://commons.wikimedia.org/wiki/Special:FilePath/Windows_logo_-_2021.svg?width=220',
+  redhat: 'https://commons.wikimedia.org/wiki/Special:FilePath/Red_Hat_logo.svg?width=220',
+  router: 'https://commons.wikimedia.org/wiki/Special:FilePath/Wireless_router.jpg?width=220',
+};
+
+function modelImageFor(device: any) {
+  const text = `${device.vendor || ''} ${device.model || ''} ${device.type || ''}`.toLowerCase();
+  if (text.includes('windows')) return modelVisuals.windows;
+  if (text.includes('ubuntu')) return modelVisuals.ubuntu;
+  if (text.includes('centos') || text.includes('red hat')) return modelVisuals.redhat;
+  if (text.includes('fortinet') || text.includes('fortigate') || text.includes('60f') || text.includes('100f') || text.includes('firewall')) return modelVisuals.firewall;
+  if (text.includes('cisco') || text.includes('catalyst')) return modelVisuals.ciscoSwitch;
+  if (text.includes('huawei') || text.includes('s5720') || text.includes('switch')) return modelVisuals.switch;
+  if (text.includes('router')) return modelVisuals.router;
+  if (text.includes('server') || text.includes('vm')) return modelVisuals.server;
+  return modelVisuals.switch;
+}
 
 const partsInventory = [
   { part: 'PSU-800W-AC', vendor: 'HP', compatible: 'ProLiant DL380', stock: 12, status: 'In Stock' },
@@ -1362,15 +1397,18 @@ export function Infrastructure() {
 
   return (
     <div className="p-6 space-y-6 relative">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center">
-            <Network className="h-8 mr-3 text-primary" />
-            Infrastructure Inventory
-          </h1>
-          <p className="text-muted-foreground mt-1">Multi-vendor on-premise device management and monitoring (Cisco, Aruba, Arista, Huawei, Dell, HP).</p>
-        </div>
-        <div className="flex space-x-2 w-full sm:w-auto">
+      <FeatureHero
+        eyebrow="Network · Infrastructure"
+        title="Infrastructure Inventory"
+        description="Multi-vendor on-premise device management, monitoring, templates, topology links, and lifecycle reporting."
+        icon={Network}
+        stats={[
+          { label: 'Devices', value: devices.length, icon: Server },
+          { label: 'Selected', value: selectedDeviceIds.length, icon: CheckCircle2 },
+          { label: 'Warnings', value: devices.filter(d => d.status === 'Warning').length, icon: AlertTriangle },
+        ]}
+        actions={
+          <>
           {selectedDeviceIds.length > 0 && (
             <Button 
               variant="outline" 
@@ -1402,8 +1440,9 @@ export function Infrastructure() {
             Export CSV
           </Button>
           <Button className="flex-1 sm:flex-none" onClick={() => setIsAddDeviceOpen(true)}>Add Device</Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <Tabs className="w-full">
         <TabsList>
@@ -1502,62 +1541,72 @@ export function Infrastructure() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Device Table */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-4">
+        <Card className="lg:col-span-2 overflow-hidden border-[#eadfce] bg-white shadow-[0_20px_80px_-45px_rgba(67,48,31,0.45)]">
+          <CardHeader className="border-b border-[#f0e5d8] bg-[#fffaf3] pb-5">
             <div className="flex flex-col space-y-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">On-Premise Devices</CardTitle>
-                <div className="relative w-64">
-                  <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#1f1a13] text-white">
+                      <Server className="h-4 w-4" />
+                    </span>
+                    On-Premise Devices
+                  </CardTitle>
+                  <CardDescription className="mt-2">
+                    Showing {filteredDevices.length} of {devices.length} devices across vendors, sites, owners, and status states.
+                  </CardDescription>
+                </div>
+                <div className="relative w-full xl:w-[360px]">
+                  <Search className="w-4 h-4 absolute left-4 top-3.5 text-[#9a8066]" />
                   <input 
                     type="text" 
                     placeholder="Search infrastructure..." 
-                    className="w-full pl-9 pr-4 py-2 bg-muted/50 rounded-md border text-sm outline-none"
+                    className="w-full rounded-2xl border border-[#e8dccd] bg-white py-3 pl-11 pr-4 text-sm outline-none shadow-inner placeholder:text-[#b0a090]"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase text-muted-foreground">Type</label>
-                  <Select value={filters.type} onValueChange={(val) => setFilters(prev => ({ ...prev, type: val }))} className="h-8 text-xs bg-muted/50">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9a8066]">Type</label>
+                  <Select value={filters.type} onValueChange={(val) => setFilters(prev => ({ ...prev, type: val }))} className="h-9 rounded-xl border-[#e8dccd] bg-white text-xs">
                     <SelectValue placeholder="Select Type" />
                     {uniqueTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase text-muted-foreground">Vendor</label>
-                  <Select value={filters.vendor} onValueChange={(val) => setFilters(prev => ({ ...prev, vendor: val }))} className="h-8 text-xs bg-muted/50">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9a8066]">Vendor</label>
+                  <Select value={filters.vendor} onValueChange={(val) => setFilters(prev => ({ ...prev, vendor: val }))} className="h-9 rounded-xl border-[#e8dccd] bg-white text-xs">
                     <SelectValue placeholder="Select Vendor" />
                     {uniqueVendors.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase text-muted-foreground">Site</label>
-                  <Select value={filters.site} onValueChange={(val) => setFilters(prev => ({ ...prev, site: val }))} className="h-8 text-xs bg-muted/50">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9a8066]">Site</label>
+                  <Select value={filters.site} onValueChange={(val) => setFilters(prev => ({ ...prev, site: val }))} className="h-9 rounded-xl border-[#e8dccd] bg-white text-xs">
                     <SelectValue placeholder="Select Site" />
                     {uniqueSites.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase text-muted-foreground">Status</label>
-                  <Select value={filters.status} onValueChange={(val) => setFilters(prev => ({ ...prev, status: val }))} className="h-8 text-xs bg-muted/50">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9a8066]">Status</label>
+                  <Select value={filters.status} onValueChange={(val) => setFilters(prev => ({ ...prev, status: val }))} className="h-9 rounded-xl border-[#e8dccd] bg-white text-xs">
                     <SelectValue placeholder="Select Status" />
                     {uniqueStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase text-muted-foreground">Criticality</label>
-                  <Select value={filters.criticality} onValueChange={(val) => setFilters(prev => ({ ...prev, criticality: val }))} className="h-8 text-xs bg-muted/50">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9a8066]">Criticality</label>
+                  <Select value={filters.criticality} onValueChange={(val) => setFilters(prev => ({ ...prev, criticality: val }))} className="h-9 rounded-xl border-[#e8dccd] bg-white text-xs">
                     <SelectValue placeholder="Select Criticality" />
                     {uniqueCriticalities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase text-muted-foreground">Owner</label>
-                  <Select value={filters.owner} onValueChange={(val) => setFilters(prev => ({ ...prev, owner: val }))} className="h-8 text-xs bg-muted/50">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9a8066]">Owner</label>
+                  <Select value={filters.owner} onValueChange={(val) => setFilters(prev => ({ ...prev, owner: val }))} className="h-9 rounded-xl border-[#e8dccd] bg-white text-xs">
                     <SelectValue placeholder="Select Owner" />
                     {uniqueOwners.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                   </Select>
@@ -1565,10 +1614,10 @@ export function Infrastructure() {
               </div>
 
               {(filters.type !== 'All' || filters.vendor !== 'All' || filters.site !== 'All' || filters.status !== 'All' || filters.criticality !== 'All' || filters.owner !== 'All' || searchTerm !== '') && (
-                <div className="flex items-center justify-between pt-2 border-t border-muted/30">
+                <div className="flex items-center justify-between pt-3 border-t border-[#eadfce]">
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(filters).map(([key, value]) => value !== 'All' && (
-                      <Badge key={key} variant="outline" className="text-[10px] py-0 h-5 flex items-center gap-1">
+                      <Badge key={key} variant="outline" className="text-[10px] py-0 h-6 flex items-center gap-1 border-[#eadfce] bg-white text-[#5f5347]">
                         <span className="capitalize text-muted-foreground">{key}:</span> {value}
                         <X 
                           className="w-2.5 h-2.5 cursor-pointer hover:text-red-500" 
@@ -1577,7 +1626,7 @@ export function Infrastructure() {
                       </Badge>
                     ))}
                     {searchTerm && (
-                      <Badge variant="outline" className="text-[10px] py-0 h-5 flex items-center gap-1">
+                      <Badge variant="outline" className="text-[10px] py-0 h-6 flex items-center gap-1 border-[#eadfce] bg-white text-[#5f5347]">
                         <span className="text-muted-foreground">Search:</span> {searchTerm}
                         <X 
                           className="w-2.5 h-2.5 cursor-pointer hover:text-red-500" 
@@ -1607,11 +1656,11 @@ export function Infrastructure() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-muted/30">
+              <div className="grid grid-cols-2 gap-4 pt-3 border-t border-[#eadfce]">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase text-muted-foreground">Group By</label>
+                  <label className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9a8066]">Group By</label>
                   <select 
-                    className="w-full bg-muted/50 border rounded-md px-2 py-1 text-xs outline-none"
+                    className="w-full rounded-xl border border-[#e8dccd] bg-white px-3 py-2 text-xs outline-none"
                     value={groupBy}
                     onChange={(e) => setGroupBy(e.target.value)}
                   >
@@ -1623,9 +1672,9 @@ export function Infrastructure() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase text-muted-foreground">Then By</label>
+                  <label className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9a8066]">Then By</label>
                   <select 
-                    className="w-full bg-muted/50 border rounded-md px-2 py-1 text-xs outline-none"
+                    className="w-full rounded-xl border border-[#e8dccd] bg-white px-3 py-2 text-xs outline-none disabled:opacity-50"
                     value={secondaryGroupBy}
                     onChange={(e) => setSecondaryGroupBy(e.target.value)}
                     disabled={groupBy === 'None'}
@@ -1640,10 +1689,11 @@ export function Infrastructure() {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-white">
                   <TableHead className="w-[40px]">
                     <Checkbox 
                       id="select-all"
@@ -1651,10 +1701,10 @@ export function Infrastructure() {
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
-                  <TableHead>Hostname</TableHead>
+                  <TableHead className="min-w-[220px]">Hostname</TableHead>
                   <TableHead className="hidden md:table-cell">Serial Number</TableHead>
-                  <TableHead>Vendor</TableHead>
-                  <TableHead>Model</TableHead>
+                  <TableHead className="min-w-[120px]">Vendor</TableHead>
+                  <TableHead className="min-w-[180px]">Model</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Site</TableHead>
                   <TableHead className="hidden lg:table-cell">Last Backup</TableHead>
@@ -1670,8 +1720,8 @@ export function Infrastructure() {
                     return (
                       <React.Fragment key={primaryKey}>
                         {groupBy !== 'None' && (
-                          <TableRow className="bg-muted/30 hover:bg-muted/30">
-                            <TableCell colSpan={10} className="py-2 px-4 font-bold text-xs uppercase text-muted-foreground">
+                          <TableRow className="bg-[#fff5ec] hover:bg-[#fff5ec]">
+                            <TableCell colSpan={11} className="py-3 px-5 font-bold text-xs uppercase tracking-[0.16em] text-[#9a4f25]">
                               {primaryKey} ({primaryValue.length})
                             </TableCell>
                           </TableRow>
@@ -1680,8 +1730,8 @@ export function Infrastructure() {
                           <TableRow 
                             key={device.id} 
                             className={cn(
-                              "cursor-pointer hover:bg-muted/50 transition-colors",
-                              selectedDeviceIds.includes(device.id) && "bg-[#FAE8DC]/50"
+                              "cursor-pointer transition-colors hover:bg-[#fffaf3]",
+                              selectedDeviceIds.includes(device.id) && "bg-[#fff5ec]"
                             )}
                             onClick={() => {
                               setSelectedDeviceId(device.id);
@@ -1695,17 +1745,43 @@ export function Infrastructure() {
                                 onCheckedChange={() => toggleSelectDevice(device.id)}
                               />
                             </TableCell>
-                            <TableCell className="font-semibold">{device.name}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#1f1a13] text-white">
+                                  {getTypeIcon(device.type)}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="truncate font-semibold text-[#1f1a13]">{device.name}</div>
+                                  <div className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">{device.ip || 'No management IP'}</div>
+                                </div>
+                              </div>
+                            </TableCell>
                             <TableCell className="hidden md:table-cell font-mono text-xs">{device.serial}</TableCell>
-                            <TableCell className="text-sm">{device.vendor}</TableCell>
-                            <TableCell className="text-sm">{device.model}</TableCell>
+                            <TableCell className="text-sm font-medium text-[#5f5347]">{device.vendor || 'Unknown'}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="h-11 w-14 shrink-0 overflow-hidden rounded-xl border border-[#eadfce] bg-[#fffaf3]">
+                                  <img
+                                    src={modelImageFor(device)}
+                                    alt={`${device.model || device.type || 'Device'} visual`}
+                                    className="h-full w-full object-cover"
+                                    loading="lazy"
+                                    onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                                  />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="truncate text-sm font-medium text-[#1f1a13]">{device.model || 'Unknown'}</div>
+                                  <div className="truncate text-[11px] text-muted-foreground">{device.vendor || 'Unknown vendor'}</div>
+                                </div>
+                              </div>
+                            </TableCell>
                             <TableCell className="text-sm">
-                              <div className="flex items-center">
+                              <div className="inline-flex items-center rounded-full bg-[#fff5ec] px-3 py-1 text-xs font-semibold text-[#9f4f25] ring-1 ring-[#eadfce]">
                                 {getTypeIcon(device.type)}
                                 {device.type}
                               </div>
                             </TableCell>
-                            <TableCell className="text-sm">{device.site}</TableCell>
+                            <TableCell className="text-sm text-[#5f5347]">{device.site || '—'}</TableCell>
                             <TableCell className="hidden lg:table-cell text-xs font-mono text-muted-foreground">{device.lastBackup}</TableCell>
                             <TableCell>
                               <Badge variant={getHealthBadgeVariant(calculateHealthScore(device))} className="font-mono text-[10px]">
@@ -1798,15 +1874,15 @@ export function Infrastructure() {
                     // Two level grouping
                     return (
                       <React.Fragment key={primaryKey}>
-                        <TableRow className="bg-muted/40 hover:bg-muted/40">
-                          <TableCell colSpan={10} className="py-2 px-4 font-bold text-sm uppercase text-primary">
+                        <TableRow className="bg-[#fff5ec] hover:bg-[#fff5ec]">
+                          <TableCell colSpan={11} className="py-3 px-5 font-bold text-xs uppercase tracking-[0.16em] text-[#9a4f25]">
                             {primaryKey}
                           </TableCell>
                         </TableRow>
                         {Object.entries(primaryValue).map(([secondaryKey, secondaryValue]: [string, any]) => (
                           <React.Fragment key={secondaryKey}>
-                            <TableRow className="bg-muted/20 hover:bg-muted/20">
-                              <TableCell colSpan={10} className="py-1 px-8 font-semibold text-xs uppercase text-muted-foreground">
+                            <TableRow className="bg-[#fffaf3] hover:bg-[#fffaf3]">
+                              <TableCell colSpan={11} className="py-2 px-8 font-semibold text-xs uppercase tracking-[0.14em] text-[#9a8066]">
                                 {secondaryKey} ({secondaryValue.length})
                               </TableCell>
                             </TableRow>
@@ -1814,8 +1890,8 @@ export function Infrastructure() {
                               <TableRow 
                                 key={device.id} 
                                 className={cn(
-                                  "cursor-pointer hover:bg-muted/50 transition-colors",
-                                  selectedDeviceIds.includes(device.id) && "bg-[#FAE8DC]/50"
+                                  "cursor-pointer transition-colors hover:bg-[#fffaf3]",
+                                  selectedDeviceIds.includes(device.id) && "bg-[#fff5ec]"
                                 )}
                                 onClick={() => {
                                   setSelectedDeviceId(device.id);
@@ -1829,17 +1905,43 @@ export function Infrastructure() {
                                     onCheckedChange={() => toggleSelectDevice(device.id)}
                                   />
                                 </TableCell>
-                                <TableCell className="font-semibold pl-12">{device.name}</TableCell>
+                                <TableCell className="pl-12">
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#1f1a13] text-white">
+                                      {getTypeIcon(device.type)}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <div className="truncate font-semibold text-[#1f1a13]">{device.name}</div>
+                                      <div className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">{device.ip || 'No management IP'}</div>
+                                    </div>
+                                  </div>
+                                </TableCell>
                                 <TableCell className="hidden md:table-cell font-mono text-xs">{device.serial}</TableCell>
-                                <TableCell className="text-sm">{device.vendor}</TableCell>
-                                <TableCell className="text-sm">{device.model}</TableCell>
+                                <TableCell className="text-sm font-medium text-[#5f5347]">{device.vendor || 'Unknown'}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-3">
+                                    <div className="h-11 w-14 shrink-0 overflow-hidden rounded-xl border border-[#eadfce] bg-[#fffaf3]">
+                                      <img
+                                        src={modelImageFor(device)}
+                                        alt={`${device.model || device.type || 'Device'} visual`}
+                                        className="h-full w-full object-cover"
+                                        loading="lazy"
+                                        onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                                      />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <div className="truncate text-sm font-medium text-[#1f1a13]">{device.model || 'Unknown'}</div>
+                                      <div className="truncate text-[11px] text-muted-foreground">{device.vendor || 'Unknown vendor'}</div>
+                                    </div>
+                                  </div>
+                                </TableCell>
                                 <TableCell className="text-sm">
-                                  <div className="flex items-center">
+                                  <div className="inline-flex items-center rounded-full bg-[#fff5ec] px-3 py-1 text-xs font-semibold text-[#9f4f25] ring-1 ring-[#eadfce]">
                                     {getTypeIcon(device.type)}
                                     {device.type}
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-sm">{device.site}</TableCell>
+                                <TableCell className="text-sm text-[#5f5347]">{device.site || '—'}</TableCell>
                                 <TableCell className="hidden lg:table-cell text-xs font-mono text-muted-foreground">{device.lastBackup}</TableCell>
                                 <TableCell>
                                   <Badge variant={getHealthBadgeVariant(calculateHealthScore(device))} className="font-mono text-[10px]">
@@ -1934,40 +2036,52 @@ export function Infrastructure() {
                 })}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
 
         {/* Model Catalog & Parts */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
+          <Card className="overflow-hidden border-[#eadfce] bg-white shadow-[0_20px_80px_-45px_rgba(67,48,31,0.35)]">
+            <CardHeader className="border-b border-[#f0e5d8] bg-[#1f1a13] text-white">
               <CardTitle className="text-lg flex items-center">
-                <Info className="w-4 h-4 mr-2 text-[#C8622E]" />
+                <span className="mr-3 flex h-9 w-9 items-center justify-center rounded-2xl bg-white/10 text-[#f1c27d]">
+                  <Info className="w-4 h-4" />
+                </span>
                 Model Catalog
               </CardTitle>
-              <CardDescription>Standardized hardware profiles.</CardDescription>
+              <CardDescription className="text-[#d8cbbd]">Standardized hardware profiles and lifecycle references.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 bg-[#fffaf3] p-4">
               {modelCatalog.map((item, idx) => {
                 const associatedParts = partsInventory.filter(p => 
                   item.model.includes(p.compatible) || p.compatible.includes(item.model)
                 );
 
                 return (
-                  <div key={idx} className="p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                  <div key={idx} className="rounded-2xl border border-[#eadfce] bg-white p-4 shadow-sm transition-colors hover:bg-[#fffaf3]">
+                    <div className="mb-3 h-28 overflow-hidden rounded-2xl border border-[#eadfce] bg-[#fffaf3]">
+                      <img
+                        src={item.imageUrl}
+                        alt={`${item.vendor} ${item.model}`}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                        onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                      />
+                    </div>
                     <div className="flex justify-between items-start mb-1">
-                      <span className="font-bold text-sm">{item.model}</span>
-                      <Badge variant="outline" className="text-[10px]">{item.vendor}</Badge>
+                      <span className="font-bold text-sm text-[#1f1a13]">{item.model}</span>
+                      <Badge variant="outline" className="border-[#eadfce] bg-[#fff5ec] text-[10px] text-[#9f4f25]">{item.vendor}</Badge>
                     </div>
                     <p className="text-[11px] text-muted-foreground mb-2">{item.category}</p>
-                    <div className="text-[10px] text-primary font-medium mb-3">{item.features}</div>
+                    <div className="text-[10px] text-[#9f4f25] font-medium mb-3">{item.features}</div>
                     
                     <div className="grid grid-cols-2 gap-2 mb-3">
-                      <div className="p-1.5 bg-muted/30 rounded border border-muted/50">
+                      <div className="p-2 bg-[#fffaf3] rounded-xl border border-[#eadfce]">
                         <p className="text-[8px] text-muted-foreground uppercase font-bold">End of Life</p>
                         <p className="text-[10px] font-mono">{item.eol}</p>
                       </div>
-                      <div className="p-1.5 bg-muted/30 rounded border border-muted/50">
+                      <div className="p-2 bg-[#fffaf3] rounded-xl border border-[#eadfce]">
                         <p className="text-[8px] text-muted-foreground uppercase font-bold">End of Support</p>
                         <p className="text-[10px] font-mono">{item.eos}</p>
                       </div>
@@ -1989,7 +2103,7 @@ export function Infrastructure() {
                     </div>
                     
                     {associatedParts.length > 0 && (
-                      <div className="mt-2 pt-2 border-t space-y-2">
+                      <div className="mt-3 pt-3 border-t border-[#eadfce] space-y-2">
                         <p className="text-[9px] font-bold uppercase text-muted-foreground tracking-wider">Associated Parts</p>
                         {associatedParts.map((part, pIdx) => (
                           <div key={pIdx} className="flex items-center justify-between text-[10px]">
@@ -2012,25 +2126,35 @@ export function Infrastructure() {
                         ))}
                       </div>
                     )}
+                    <a
+                      href={item.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 inline-flex items-center text-[10px] font-semibold text-[#9f4f25] hover:underline"
+                    >
+                      Product source <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
                   </div>
                 );
               })}
-              <Button variant="outline" className="w-full text-xs">Explore Full Catalog</Button>
+              <Button variant="outline" className="w-full rounded-2xl border-[#eadfce] bg-white text-xs text-[#9f4f25] hover:bg-[#fff5ec]">Explore Full Catalog</Button>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
+          <Card className="overflow-hidden border-[#eadfce] bg-white shadow-[0_20px_80px_-45px_rgba(67,48,31,0.35)]">
+            <CardHeader className="border-b border-[#f0e5d8] bg-[#fffaf3]">
               <CardTitle className="text-lg flex items-center">
-                <Zap className="w-4 h-4 mr-2 text-yellow-500" />
+                <span className="mr-3 flex h-9 w-9 items-center justify-center rounded-2xl bg-[#1f1a13] text-[#f1c27d]">
+                  <Zap className="w-4 h-4" />
+                </span>
                 Critical Spare Parts
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 p-4">
               {partsInventory.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 border-b last:border-0">
+                <div key={idx} className="flex items-center justify-between rounded-2xl border border-[#eadfce] bg-[#fffaf3] p-3">
                   <div className="space-y-0.5">
-                    <p className="text-xs font-bold">{item.part}</p>
+                    <p className="text-xs font-bold text-[#1f1a13]">{item.part}</p>
                     <p className="text-[10px] text-muted-foreground">For {item.vendor} {item.compatible}</p>
                   </div>
                   <div className="text-right flex flex-col items-end space-y-1">

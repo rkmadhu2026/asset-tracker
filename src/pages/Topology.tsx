@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Network, Server, Shield, Globe, Database, HardDrive, RefreshCw, ZoomIn, Loader2 } from 'lucide-react';
 import { infrastructureApi, type Device } from '../lib/api';
 import { useClient } from '../components/ClientProvider';
+import { FeatureHero } from '@/components/FeatureHero';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -257,14 +258,19 @@ function TopologyInner() {
   const noClient = !selectedClientId;
 
   return (
-    <div className="h-[calc(100vh-10rem)] flex flex-col gap-3">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Network Topology</h1>
-          <p className="text-sm text-muted-foreground">Physical links (solid) and logical paths (dashed) between devices.</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
+    <div className="min-h-[calc(100vh-10rem)] flex flex-col gap-3">
+      <FeatureHero
+        eyebrow="Network · Topology"
+        title="Network Topology"
+        description="Visualize physical links, logical paths, device health, and relationship maps across selected clients."
+        icon={Network}
+        stats={[
+          { label: 'Nodes', value: stats.nodes, icon: Network },
+          { label: 'Physical', value: stats.physical, icon: ZoomIn },
+          { label: 'Logical', value: stats.logical, icon: RefreshCw },
+        ]}
+        actions={
+          <>
           {loading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
           {!noClient && (
             <>
@@ -279,8 +285,9 @@ function TopologyInner() {
           <Button variant="outline" size="sm" onClick={() => fitView({ padding: 0.12, duration: 400 })} disabled={noClient || stats.nodes === 0}>
             <ZoomIn className="w-4 h-4 mr-1" />Fit
           </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Truncation warning */}
       {truncated && (
@@ -290,7 +297,7 @@ function TopologyInner() {
         </div>
       )}
 
-      <Card className="flex-1 overflow-hidden border relative">
+      <Card className="min-h-[620px] flex-1 overflow-hidden border relative">
         {/* Legend */}
         <div className="absolute top-3 left-3 z-10 rounded-lg p-3 text-[11px] space-y-1.5 min-w-[140px]"
           style={{ background: 'rgba(253,250,247,0.96)', border: '1px solid #E8E1D8', boxShadow: '0 2px 8px rgba(41,37,36,0.1)' }}>

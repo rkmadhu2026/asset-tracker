@@ -11,6 +11,7 @@ import {
 import { infrastructureApi } from '../lib/api';
 import { useClient } from '@/components/ClientProvider';
 import { cn } from '@/lib/utils';
+import { FeatureHero } from '@/components/FeatureHero';
 
 function typeIcon(type: string) {
   const t = (type || '').toLowerCase();
@@ -100,18 +101,18 @@ export function Monitoring() {
 
   return (
     <div className="space-y-6 p-1">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <div className="p-2 rounded-lg text-white" style={{ background: '#C8622E' }}>
-              <Activity className="h-5 w-5" />
-            </div>
-            Network Monitoring
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Real-time on-premise device status and performance metrics.</p>
-        </div>
-        <div className="flex items-center gap-2">
+      <FeatureHero
+        eyebrow="Network · Observability"
+        title="Network Monitoring"
+        description="Real-time on-premise device status, availability, latency, throughput, and operational health metrics."
+        icon={Activity}
+        stats={[
+          { label: 'Online', value: activeCount, icon: CheckCircle2 },
+          { label: 'Warning', value: warningCount, icon: AlertTriangle },
+          { label: 'Availability', value: `${availability}%`, icon: Activity },
+        ]}
+        actions={
+          <>
           <span className="text-xs text-muted-foreground hidden sm:block">
             Last updated: {lastRefresh.toLocaleTimeString()}
           </span>
@@ -126,8 +127,9 @@ export function Monitoring() {
             <Zap className="w-4 h-4 mr-1.5" />
             Configure Alerts
           </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
