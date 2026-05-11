@@ -15,12 +15,13 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { 
-  Search, Filter, Network, Server, Shield, 
-  ArrowRight, ArrowLeft, ExternalLink, Info, Layers, 
+import {
+  Search, Filter, Network, Server, Shield,
+  ArrowRight, ArrowLeft, ExternalLink, Info, Layers,
   Database, Activity, Globe, Zap, Cpu, HardDrive, Fan,
   CheckCircle2, AlertTriangle, XCircle, ShoppingCart, Clock, X, Package,
-  MoreVertical, RefreshCw, ChevronDown, ChevronRight, Network as NetworkIcon, ShieldCheck, FileUp, Download
+  MoreVertical, RefreshCw, ChevronDown, ChevronRight, Network as NetworkIcon, ShieldCheck, FileUp, Download,
+  Router, Monitor, PrinterCheck,
 } from 'lucide-react';
 
 import { DeviceTemplates } from '@/components/DeviceTemplates';
@@ -828,95 +829,96 @@ const initialInfrastructureDevices = [
 ];
 
 const modelCatalog = [
-  { 
-    model: 'CX 6300M', 
-    vendor: 'Aruba', 
-    category: 'Access Switch', 
-    features: 'PoE+, Stackable, 10G Uplinks', 
-    eol: '2028-12-31', 
+  {
+    model: 'CX 6300M',
+    vendor: 'Aruba',
+    category: 'Access Switch',
+    features: 'PoE+, Stackable, 10G Uplinks',
+    eol: '2028-12-31',
     eos: '2030-12-31',
     warranty: 'Lifetime Limited',
     power: 'Max 880W',
     mtbf: '450,000 hrs',
-    imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Ethernet%20Switch.jpg?width=420',
+    icon: Network,
+    iconBg: '#1e40af',
     sourceUrl: 'https://www.arubanetworks.com/products/switches/access/6300-series/',
   },
-  { 
-    model: '7050SX3', 
-    vendor: 'Arista', 
-    category: 'DC Leaf', 
-    features: '25G SFP28, Ultra Low Latency', 
-    eol: '2027-06-30', 
+  {
+    model: '7050SX3',
+    vendor: 'Arista',
+    category: 'DC Leaf',
+    features: '25G SFP28, Ultra Low Latency',
+    eol: '2027-06-30',
     eos: '2029-06-30',
     warranty: '1 Year Hardware',
     power: 'Typical 180W',
     mtbf: '380,000 hrs',
-    imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Network_switch.jpg?width=420',
+    icon: Layers,
+    iconBg: '#065f46',
     sourceUrl: 'https://www.arista.com/en/products/7050x3-series',
   },
-  { 
-    model: 'NetEngine AR6000', 
-    vendor: 'Huawei', 
-    category: 'Enterprise Router', 
-    features: 'SD-WAN, High Performance', 
-    eol: '2029-01-15', 
+  {
+    model: 'NetEngine AR6000',
+    vendor: 'Huawei',
+    category: 'Enterprise Router',
+    features: 'SD-WAN, High Performance',
+    eol: '2029-01-15',
     eos: '2031-01-15',
     warranty: '3 Year Standard',
     power: 'Max 350W',
     mtbf: '520,000 hrs',
-    imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Ethernet%20Switch.jpg?width=420',
-    sourceUrl: 'https://support.huawei.com/enterprise/en/doc/EDOC1000013597/88f2e4a/s5720-52x-li-ac',
+    icon: Router,
+    iconBg: '#92400e',
+    sourceUrl: 'https://support.huawei.com/enterprise/en/routers/netengine-ar6000-pid-23483339',
   },
-  { 
-    model: 'ProLiant DL380 Gen10', 
-    vendor: 'HP', 
-    category: 'Rack Server', 
-    features: 'Scalable, Secure, Reliable', 
-    eol: '2026-11-20', 
+  {
+    model: 'ProLiant DL380 Gen10',
+    vendor: 'HP',
+    category: 'Rack Server',
+    features: 'Scalable, Secure, Reliable',
+    eol: '2026-11-20',
     eos: '2028-11-20',
     warranty: '3-3-3 NBD',
     power: '800W Platinum',
     mtbf: '280,000 hrs',
-    imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/HP%20ProLiant%20DL360%20and%20two%20DL380.jpg?width=420',
+    icon: Server,
+    iconBg: '#1f1a13',
     sourceUrl: 'https://www.hpe.com/us/en/servers/proliant-dl380.html',
   },
-  { 
-    model: 'PowerEdge R740', 
-    vendor: 'Dell', 
-    category: 'Rack Server', 
-    features: 'High Performance, Storage Rich', 
-    eol: '2027-03-15', 
+  {
+    model: 'PowerEdge R740',
+    vendor: 'Dell',
+    category: 'Rack Server',
+    features: 'High Performance, Storage Rich',
+    eol: '2027-03-15',
     eos: '2029-03-15',
     warranty: 'ProSupport 24x7',
     power: '750W Titanium',
     mtbf: '310,000 hrs',
-    imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Dell%20PowerEdge%20servers.jpg?width=420',
+    icon: Server,
+    iconBg: '#3b1a66',
     sourceUrl: 'https://www.dell.com/support/home/en-in/product-support/product/poweredge-r740/overview',
   },
 ];
 
-const modelVisuals = {
-  switch: 'https://commons.wikimedia.org/wiki/Special:FilePath/Ethernet%20Switch.jpg?width=220',
-  ciscoSwitch: 'https://commons.wikimedia.org/wiki/Special:FilePath/Network_switch.jpg?width=220',
-  firewall: 'https://commons.wikimedia.org/wiki/Special:FilePath/Network_firewall.svg?width=220',
-  server: 'https://commons.wikimedia.org/wiki/Special:FilePath/HP%20ProLiant%20DL360%20and%20two%20DL380.jpg?width=220',
-  ubuntu: 'https://commons.wikimedia.org/wiki/Special:FilePath/Ubuntu-logo-2022.svg?width=220',
-  windows: 'https://commons.wikimedia.org/wiki/Special:FilePath/Windows_logo_-_2021.svg?width=220',
-  redhat: 'https://commons.wikimedia.org/wiki/Special:FilePath/Red_Hat_logo.svg?width=220',
-  router: 'https://commons.wikimedia.org/wiki/Special:FilePath/Wireless_router.jpg?width=220',
-};
+function deviceTypeIcon(device: { vendor?: string; model?: string; type?: string }): { Icon: React.ComponentType<{ className?: string }>; bg: string } {
+  const t = `${device.vendor || ''} ${device.model || ''} ${device.type || ''}`.toLowerCase();
+  if (t.includes('firewall') || t.includes('fortigate') || t.includes('60f') || t.includes('100f')) return { Icon: Shield,   bg: '#991b1b' };
+  if (t.includes('router'))                                                                          return { Icon: Router,   bg: '#92400e' };
+  if (t.includes('switch') || t.includes('s5720') || t.includes('catalyst'))                        return { Icon: Network,  bg: '#1e40af' };
+  if (t.includes('storage'))                                                                         return { Icon: HardDrive,bg: '#7c3aed' };
+  if (t.includes('monitor') || t.includes('kvm'))                                                    return { Icon: Monitor,  bg: '#0369a1' };
+  if (t.includes('vm') || t.includes('virtual'))                                                     return { Icon: Cpu,      bg: '#0369a1' };
+  return { Icon: Server, bg: '#1f1a13' };
+}
 
-function modelImageFor(device: any) {
-  const text = `${device.vendor || ''} ${device.model || ''} ${device.type || ''}`.toLowerCase();
-  if (text.includes('windows')) return modelVisuals.windows;
-  if (text.includes('ubuntu')) return modelVisuals.ubuntu;
-  if (text.includes('centos') || text.includes('red hat')) return modelVisuals.redhat;
-  if (text.includes('fortinet') || text.includes('fortigate') || text.includes('60f') || text.includes('100f') || text.includes('firewall')) return modelVisuals.firewall;
-  if (text.includes('cisco') || text.includes('catalyst')) return modelVisuals.ciscoSwitch;
-  if (text.includes('huawei') || text.includes('s5720') || text.includes('switch')) return modelVisuals.switch;
-  if (text.includes('router')) return modelVisuals.router;
-  if (text.includes('server') || text.includes('vm')) return modelVisuals.server;
-  return modelVisuals.switch;
+function DeviceTypeTile({ device }: { device: { vendor?: string; model?: string; type?: string } }) {
+  const { Icon, bg } = deviceTypeIcon(device);
+  return (
+    <div className="flex h-11 w-14 shrink-0 items-center justify-center rounded-xl" style={{ background: bg }}>
+      <Icon className="h-5 w-5 text-white" />
+    </div>
+  );
 }
 
 const partsInventory = [
@@ -1760,18 +1762,10 @@ export function Infrastructure() {
                             <TableCell className="text-sm font-medium text-[#5f5347]">{device.vendor || 'Unknown'}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-3">
-                                <div className="h-11 w-14 shrink-0 overflow-hidden rounded-xl border border-[#eadfce] bg-[#fffaf3]">
-                                  <img
-                                    src={modelImageFor(device)}
-                                    alt={`${device.model || device.type || 'Device'} visual`}
-                                    className="h-full w-full object-cover"
-                                    loading="lazy"
-                                    onError={(event) => { event.currentTarget.style.display = 'none'; }}
-                                  />
-                                </div>
+                                <DeviceTypeTile device={device} />
                                 <div className="min-w-0">
-                                  <div className="truncate text-sm font-medium text-[#1f1a13]">{device.model || 'Unknown'}</div>
-                                  <div className="truncate text-[11px] text-muted-foreground">{device.vendor || 'Unknown vendor'}</div>
+                                  <div className="truncate text-sm font-medium text-[#1f1a13]">{device.model || '—'}</div>
+                                  <div className="truncate text-[11px] text-muted-foreground">{device.vendor || '—'}</div>
                                 </div>
                               </div>
                             </TableCell>
@@ -1920,18 +1914,10 @@ export function Infrastructure() {
                                 <TableCell className="text-sm font-medium text-[#5f5347]">{device.vendor || 'Unknown'}</TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-3">
-                                    <div className="h-11 w-14 shrink-0 overflow-hidden rounded-xl border border-[#eadfce] bg-[#fffaf3]">
-                                      <img
-                                        src={modelImageFor(device)}
-                                        alt={`${device.model || device.type || 'Device'} visual`}
-                                        className="h-full w-full object-cover"
-                                        loading="lazy"
-                                        onError={(event) => { event.currentTarget.style.display = 'none'; }}
-                                      />
-                                    </div>
+                                    <DeviceTypeTile device={device} />
                                     <div className="min-w-0">
-                                      <div className="truncate text-sm font-medium text-[#1f1a13]">{device.model || 'Unknown'}</div>
-                                      <div className="truncate text-[11px] text-muted-foreground">{device.vendor || 'Unknown vendor'}</div>
+                                      <div className="truncate text-sm font-medium text-[#1f1a13]">{device.model || '—'}</div>
+                                      <div className="truncate text-[11px] text-muted-foreground">{device.vendor || '—'}</div>
                                     </div>
                                   </div>
                                 </TableCell>
@@ -2060,14 +2046,8 @@ export function Infrastructure() {
 
                 return (
                   <div key={idx} className="rounded-2xl border border-[#eadfce] bg-white p-4 shadow-sm transition-colors hover:bg-[#fffaf3]">
-                    <div className="mb-3 h-28 overflow-hidden rounded-2xl border border-[#eadfce] bg-[#fffaf3]">
-                      <img
-                        src={item.imageUrl}
-                        alt={`${item.vendor} ${item.model}`}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                        onError={(event) => { event.currentTarget.style.display = 'none'; }}
-                      />
+                    <div className="mb-3 flex h-20 items-center justify-center rounded-2xl border border-[#eadfce]" style={{ background: item.iconBg }}>
+                      <item.icon className="h-9 w-9 text-white opacity-90" />
                     </div>
                     <div className="flex justify-between items-start mb-1">
                       <span className="font-bold text-sm text-[#1f1a13]">{item.model}</span>
