@@ -5,6 +5,8 @@ import {
   Building2, Menu, X, Terminal, Layers, Activity,
   LogOut, Sparkles, Users, AlertTriangle, Database, MapPin,
   ChevronDown, Shield, ChevronRight, Search, Layout as RackIcon,
+  FileText, Headphones, BookOpen, Settings,
+  BarChart3, ShieldCheck, GitPullRequest,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from './AuthProvider';
@@ -31,11 +33,11 @@ const navSections = [
   {
     label: 'Inventory',
     items: [
-      { icon: LayoutDashboard, label: 'Dashboard',       path: '/' },
-      { icon: Building2,       label: 'Clients',         path: '/clients' },
-      { icon: MapPin,          label: 'Sites',           path: '/sites' },
-      { icon: Database,        label: 'CMDB / Assets',   path: '/assets' },
-      { icon: RackIcon,        label: 'Rack Management', path: '/racks' },
+      { icon: LayoutDashboard, label: 'Dashboard',    path: '/' },
+      { icon: Building2,       label: 'Clients',      path: '/clients' },
+      { icon: MapPin,          label: 'Sites',        path: '/sites' },
+      { icon: Database,        label: 'CMDB / Assets',path: '/assets' },
+      { icon: RackIcon,        label: 'Racks',        path: '/racks' },
     ],
   },
   {
@@ -47,12 +49,26 @@ const navSections = [
     ],
   },
   {
+    label: 'ITSM',
+    items: [
+      { icon: Headphones,     label: 'Service Desk',  path: '/?tab=servicedesk' },
+      { icon: Sparkles,       label: 'Onboarding',    path: '/onboarding' },
+      { icon: ClipboardList,  label: 'Audit Trail',   path: '/audit-log' },
+    ],
+  },
+  {
     label: 'Operations',
     items: [
-      { icon: FileCode2,     label: 'Configurations', path: '/configs' },
-      { icon: Terminal,      label: 'Automation',     path: '/automation' },
-      { icon: Sparkles,      label: 'Onboarding',     path: '/onboarding' },
-      { icon: ClipboardList, label: 'Audit Log',      path: '/audit-log' },
+      { icon: FileCode2,  label: 'Configurations', path: '/configs' },
+      { icon: Terminal,   label: 'Automation',     path: '/automation' },
+      { icon: FileText,   label: 'Documents',      path: '/documents' },
+    ],
+  },
+  {
+    label: 'Analytics',
+    items: [
+      { icon: BarChart3,  label: 'Network',   path: '/?tab=network' },
+      { icon: Server,     label: 'Compute',   path: '/?tab=compute' },
     ],
   },
 ];
@@ -75,7 +91,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="flex-1 overflow-y-auto px-3 py-4" style={{ gap: 0 }}>
       {navSections.map((section, si) => (
-        <div key={section.label} className={si > 0 ? 'mt-5' : ''}>
+        <div key={section.label} className={si > 0 ? 'mt-4' : ''}>
           {/* Section label with thin rule */}
           <div className="flex items-center gap-2 px-3 mb-1.5">
             <span className="h-px flex-1" style={{ background: SIDEBAR_BORDER }} />
@@ -89,7 +105,10 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
           <div className="space-y-0.5">
             {section.items.map((item) => {
-              const isActive = location.pathname === item.path;
+              const [itemPath, itemSearch] = item.path.split('?');
+              const isActive = location.pathname === itemPath &&
+                (!itemSearch || location.search === `?${itemSearch}`);
+
               return (
                 <Link
                   key={item.path}
@@ -278,12 +297,15 @@ export function Layout() {
 
   const pageTitle = (() => {
     const flat = navSections.flatMap(s => s.items);
-    return flat.find(i => i.path === location.pathname)?.label ?? 'Argus';
+    const fullMatch = flat.find(i => i.path === location.pathname + location.search);
+    if (fullMatch) return fullMatch.label;
+    return flat.find(i => i.path.split('?')[0] === location.pathname)?.label ?? 'Argus';
   })();
 
   const breadcrumb = (() => {
     const flat = navSections.flatMap(s => s.items.map(i => ({ ...i, section: s.label })));
-    const match = flat.find(i => i.path === location.pathname);
+    const fullMatch = flat.find(i => i.path === location.pathname + location.search);
+    const match = fullMatch ?? flat.find(i => i.path.split('?')[0] === location.pathname);
     return match ? match.section : null;
   })();
 
@@ -481,10 +503,8 @@ export function Layout() {
         )}
 
         {/* Page content */}
-        <div className="flex-1 overflow-auto p-4 sm:p-6">
-          <div className="max-w-7xl mx-auto">
-            <Outlet />
-          </div>
+        <div className="flex-1 overflow-auto p-2 sm:p-4">
+          <Outlet />
         </div>
       </main>
     </div>

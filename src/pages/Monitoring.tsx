@@ -71,15 +71,17 @@ export function Monitoring() {
   const [searchTerm, setSearchTerm]   = useState('');
   const [typeFilter, setTypeFilter]   = useState('All');
   const [devices, setDevices]         = useState<any[]>([]);
-  const [loading, setLoading]         = useState(false);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const { selectedClientId } = useClient();
 
   const load = useCallback(() => {
     setLoading(true);
+    setError(null);
     infrastructureApi.list(selectedClientId ? { clientId: selectedClientId } : {})
       .then(rows => { setDevices(rows); setLastRefresh(new Date()); })
-      .catch(console.error)
+      .catch(err => { console.error(err); setError(String(err?.message ?? err)); })
       .finally(() => setLoading(false));
   }, [selectedClientId]);
 
@@ -233,11 +235,27 @@ export function Monitoring() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={9} className="text-center py-16 text-muted-foreground">
+                      <RefreshCw className="w-6 h-6 mx-auto mb-2 opacity-40 animate-spin" />
+                      <p className="text-sm">Loading devices…</p>
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan={9} className="text-center py-16 text-red-500">
+                      <AlertTriangle className="w-6 h-6 mx-auto mb-2" />
+                      <p className="text-sm font-medium">Failed to load devices</p>
+                      <p className="text-xs mt-1 text-muted-foreground">{error}</p>
+                    </td>
+                  </tr>
+                ) : filtered.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="text-center py-16 text-muted-foreground">
                       <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
                       <p className="text-sm">No devices found.</p>
+                      <p className="text-xs mt-1">Add infrastructure devices or select a different client.</p>
                     </td>
                   </tr>
                 ) : filtered.map(device => {

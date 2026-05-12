@@ -21,6 +21,7 @@ import { Onboarding } from './pages/Onboarding';
 import { AuthProvider, useAuth } from './components/AuthProvider';
 import { Login } from './pages/Login';
 import { UsersPage } from './pages/Users';
+import { Documents } from './pages/Documents';
 
 function AppContent() {
   const { user, loading, isAdmin } = useAuth();
@@ -62,6 +63,7 @@ function AppContent() {
           <Route path="audit-log" element={<AuditLog />} />
           <Route path="clients" element={<Clients />} />
           <Route path="sites" element={<Sites />} />
+          <Route path="documents" element={<Documents />} />
           {isAdmin && <Route path="users" element={<UsersPage />} />}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

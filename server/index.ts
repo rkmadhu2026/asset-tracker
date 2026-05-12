@@ -19,6 +19,8 @@ import deviceTemplatesRouter  from './routes/device-templates.js';
 import driftsRouter           from './routes/drifts.js';
 import validationHistoryRouter from './routes/validation-history.js';
 import auditLogsRouter         from './routes/audit-logs.js';
+import documentTemplatesRouter from './routes/document-templates.js';
+import documentsRouter         from './routes/documents.js';
 
 const app  = express();
 const PORT = Number(process.env.API_PORT) || 4000;
@@ -56,6 +58,8 @@ app.use('/api/device-templates',   deviceTemplatesRouter);
 app.use('/api/drifts',             driftsRouter);
 app.use('/api/validation-history', validationHistoryRouter);
 app.use('/api/audit-logs',         auditLogsRouter);
+app.use('/api/document-templates', documentTemplatesRouter);
+app.use('/api/documents',          documentsRouter);
 
 // Global error handler — keeps the server alive on unhandled route errors.
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

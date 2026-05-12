@@ -174,25 +174,25 @@ export function Sites() {
   const selectedSiteName = new URLSearchParams(window.location.search).get('site') || 'all sites';
 
   return (
-    <div className="space-y-7">
-      <section className="relative overflow-hidden rounded-[2rem] border border-[#2d261c] bg-[#18140f] p-6 text-white shadow-[0_24px_80px_-36px_rgba(24,20,15,0.8)] sm:p-8">
+    <div className="space-y-5">
+      <section className="relative overflow-hidden rounded-[2rem] border border-[#2d261c] bg-[#18140f] p-5 text-white shadow-[0_24px_80px_-36px_rgba(24,20,15,0.8)] sm:p-6">
         <div className="absolute inset-0 opacity-70">
           <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#c8622e]/35 blur-3xl" />
           <div className="absolute bottom-0 left-1/3 h-48 w-48 rounded-full bg-[#f1c27d]/20 blur-3xl" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.12)_1px,transparent_0)] [background-size:22px_22px]" />
         </div>
-        <div className="relative grid gap-8 lg:grid-cols-[1.35fr_0.85fr] lg:items-end">
+        <div className="relative grid gap-5 lg:grid-cols-[1.35fr_0.85fr] lg:items-end">
           <div>
-            <Badge className="mb-5 border-white/15 bg-white/10 text-white hover:bg-white/10">
+            <Badge className="mb-3 border-white/15 bg-white/10 text-white hover:bg-white/10">
               {selectedSiteName} &gt; Domain Status
             </Badge>
-            <h1 className="max-w-3xl text-4xl font-semibold tracking-[-0.04em] sm:text-5xl" style={{ fontFamily: displayFont }}>
+            <h1 className="max-w-3xl text-3xl font-semibold tracking-[-0.04em] sm:text-4xl" style={{ fontFamily: displayFont }}>
               Sites & Domain Status
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-[#d9cdbf] sm:text-base">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#d9cdbf] sm:text-base">
               Track environment readiness, DNS identity, public URLs, and client associations across every infrastructure site.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3 text-xs text-[#eadfd2]">
+            <div className="mt-4 flex flex-wrap gap-3 text-xs text-[#eadfd2]">
               <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5">
                 <Server className="h-3.5 w-3.5 text-[#f1c27d]" />
                 {sites.length} total sites

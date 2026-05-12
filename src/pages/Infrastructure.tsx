@@ -27,7 +27,7 @@ import {
 import { DeviceTemplates } from '@/components/DeviceTemplates';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { infrastructureApi, type Device } from '../lib/api';
+import { infrastructureApi, racksApi, sitesApi } from '../lib/api';
 import ReactFlow, { Background, Controls, MiniMap, MarkerType, Handle, Position } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -956,6 +956,72 @@ const getTypeIcon = (type: string) => {
 
 import { useClient } from '../components/ClientProvider';
 
+type DeviceImportConfig = {
+  source?: string;
+  rack?: string;
+  rackLabel?: string;
+  uSpace?: string;
+  powerWatts?: number | null;
+  maximumPowerWatts?: number | null;
+  powerSources?: number | null;
+  remarks?: string | null;
+};
+
+const parseImportConfig = (raw: unknown): DeviceImportConfig => {
+  if (!raw || typeof raw !== 'string') return {};
+  try {
+    return JSON.parse(raw) as DeviceImportConfig;
+  } catch {
+    return {};
+  }
+};
+
+const fallbackText = (value: unknown, fallback = 'N/A') => {
+  const text = String(value ?? '').trim();
+  return text || fallback;
+};
+
+const hydrateDeviceForView = (
+  device: any,
+  siteLookup: Record<string, string>,
+  rackLookup: Record<string, string>,
+) => {
+  const importConfig = parseImportConfig(device.config);
+  const rackName = rackLookup[device.rack_id] || importConfig.rack || device.rack || '';
+  const siteName = siteLookup[device.site_id] || device.site || device.site_id || '';
+  const uPosition = device.u_position || importConfig.uSpace || device.uPosition || '';
+  const cpu = fallbackText(device.cpu, '0%');
+  const memory = fallbackText(device.memory, '0%');
+  const temp = fallbackText(device.temp, '25C');
+
+  return {
+    ...device,
+    importConfig,
+    site: siteName,
+    datacenter: importConfig.rackLabel || device.datacenter || siteName,
+    rack: rackName,
+    uPosition,
+    hostname: device.hostname || device.name,
+    assignedTo: device.assignedTo || device.assigned_to,
+    belongsTo: device.belongsTo || device.owner,
+    lastBackup: device.lastBackup || device.last_backup || 'Not available',
+    warrantyExpiry: device.warrantyExpiry || device.warranty_expiry,
+    purchaseDate: device.purchaseDate || device.purchase_date,
+    cpu,
+    memory,
+    temp,
+    powerSupplies: device.powerSupplies || importConfig.powerSources,
+    psuCapacity:
+      device.psuCapacity ||
+      (importConfig.maximumPowerWatts ? `${importConfig.maximumPowerWatts}W max` : undefined),
+    powerWatts: importConfig.powerWatts,
+    deploymentStatus:
+      device.deploymentStatus ||
+      (device.status === 'Offline' ? 'Remove / Offline' : 'Installed'),
+    criticality: device.criticality || 'Medium',
+  };
+};
+
 export function Infrastructure() {
   const [devices, setDevices] = useState<any[]>([]);
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
@@ -1044,8 +1110,21 @@ export function Infrastructure() {
   }, []);
 
   useEffect(() => {
-    infrastructureApi.list(selectedClientId ? { clientId: selectedClientId } : {})
-      .then(setDevices)
+    Promise.all([
+      infrastructureApi.list(selectedClientId ? { clientId: selectedClientId } : {}),
+      sitesApi.list(),
+      racksApi.list(),
+    ])
+      .then(([deviceRows, siteRows, rackRows]) => {
+        const nextSiteLookup = Object.fromEntries(
+          siteRows.map((site: any) => [site.id, site.name || site.id]),
+        );
+        const nextRackLookup = Object.fromEntries(
+          rackRows.map((rack: any) => [rack.id, rack.name || rack.id]),
+        );
+
+        setDevices(deviceRows.map((device) => hydrateDeviceForView(device, nextSiteLookup, nextRackLookup)));
+      })
       .catch(console.error);
   }, [selectedClientId]);
 
@@ -1062,16 +1141,20 @@ export function Infrastructure() {
     return acc;
   }, { Active: 0, Warning: 0, Offline: 0 } as Record<string, number>);
 
-  const uniqueTypes = Array.from(new Set(['All', 'Switch', 'Router', 'Server', 'Firewall', 'Storage', 'Power', 'Patch Panel', ...devices.map(d => d.type)]));
-  const uniqueVendors = ['All', ...new Set(devices.map(d => d.vendor))];
-  const uniqueSites = ['All', ...new Set(devices.map(d => d.site))];
-  const uniqueStatuses = ['All', ...new Set(devices.map(d => d.status))];
+  const uniqueTypes = Array.from(new Set(['All', 'Switch', 'Router', 'Server', 'Firewall', 'Storage', 'Power', 'Patch Panel', ...devices.map(d => d.type).filter(Boolean)]));
+  const uniqueVendors = ['All', ...new Set(devices.map(d => d.vendor).filter(Boolean))];
+  const uniqueSites = ['All', ...new Set(devices.map(d => d.site).filter(Boolean))];
+  const uniqueStatuses = ['All', ...new Set(devices.map(d => d.status).filter(Boolean))];
   const uniqueCriticalities = ['All', 'Critical', 'High', 'Medium', 'Low'];
-  const uniqueOwners = ['All', ...new Set(devices.map(d => d.owner))];
+  const uniqueOwners = ['All', ...new Set(devices.map(d => d.owner).filter(Boolean))];
 
   const filteredDevices = devices.filter(device => {
-    const matchesSearch = device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         device.model.toLowerCase().includes(searchTerm.toLowerCase());
+    const search = searchTerm.toLowerCase();
+    const matchesSearch = (device.name || '').toLowerCase().includes(search) ||
+                         (device.model || '').toLowerCase().includes(search) ||
+                         (device.serial || '').toLowerCase().includes(search) ||
+                         (device.ip || '').toLowerCase().includes(search) ||
+                         (device.rack || '').toLowerCase().includes(search);
     const matchesType = filters.type === 'All' || device.type === filters.type;
     const matchesVendor = filters.vendor === 'All' || device.vendor === filters.vendor;
     const matchesSite = filters.site === 'All' || device.site === filters.site;
@@ -1799,6 +1882,7 @@ export function Infrastructure() {
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedDeviceId(device.id);
+                                    setIsDeviceDetailsOpen(true);
                                   }}
                                 >
                                   <ExternalLink className="w-3.5 h-3.5 mr-1" />
@@ -1825,6 +1909,7 @@ export function Infrastructure() {
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           setSelectedDeviceId(device.id);
+                                          setIsDeviceDetailsOpen(true);
                                           setActiveMenuId(null);
                                         }}
                                       >
@@ -1951,6 +2036,7 @@ export function Infrastructure() {
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setSelectedDeviceId(device.id);
+                                        setIsDeviceDetailsOpen(true);
                                       }}
                                     >
                                       <ExternalLink className="w-3.5 h-3.5 mr-1" />
@@ -1977,6 +2063,7 @@ export function Infrastructure() {
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               setSelectedDeviceId(device.id);
+                                              setIsDeviceDetailsOpen(true);
                                               setActiveMenuId(null);
                                             }}
                                           >
@@ -2270,108 +2357,132 @@ export function Infrastructure() {
       {/* Device Detail Modal Overlay */}
       {isDeviceDetailsOpen && selectedDevice && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 backdrop-blur-sm animate-in fade-in duration-200 sm:p-4"
           onClick={() => setIsDeviceDetailsOpen(false)}
         >
           <div 
-            className="bg-background border rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
+            className="flex max-h-[calc(100dvh-1rem)] w-full max-w-7xl flex-col overflow-hidden rounded-xl border bg-background shadow-2xl animate-in zoom-in-95 duration-200 sm:max-h-[calc(100dvh-2rem)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="p-6 border-b flex items-center justify-between bg-muted/30">
-              <div className="flex items-center space-x-4">
-                <div className="p-2 bg-primary/10 rounded-lg">
+            <div className="flex flex-col gap-3 border-b bg-[#1f1a13] p-4 text-white md:flex-row md:items-center md:justify-between lg:p-5">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10">
                   {getTypeIcon(selectedDevice.type)}
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold tracking-tight">{selectedDevice.name}</h2>
-                  <div className="flex items-center space-x-2 mt-1">
+                <div className="min-w-0">
+                  <h2 className="truncate text-lg font-bold tracking-tight sm:text-xl">{selectedDevice.name}</h2>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     <Badge variant={
                       selectedDevice.status === 'Active' ? 'success' : 
                       selectedDevice.status === 'Warning' ? 'warning' : 'destructive'
                     }>
                       {selectedDevice.status}
                     </Badge>
-                    <span className="text-xs text-muted-foreground">{selectedDevice.id} • {selectedDevice.site}</span>
+                    <span className="text-xs text-[#d8cbbd]">{selectedDevice.type}</span>
+                    <span className="text-xs text-[#d8cbbd]">{fallbackText(selectedDevice.site)}</span>
+                    <span className="text-xs text-[#d8cbbd]">{fallbackText(selectedDevice.rack)} / {fallbackText(selectedDevice.uPosition)}</span>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={handleNormalize} 
                   disabled={isNormalizing}
-                  className="hidden sm:flex items-center"
+                  className="hidden items-center border-white/20 bg-white/10 text-white hover:bg-white/20 sm:flex"
                 >
                   {isNormalizing ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2 text-yellow-500" />}
                   Normalize with Gemini
                 </Button>
-                <Button variant="outline" size="sm" className="hidden sm:flex">Web Console</Button>
-                <Button variant="outline" size="sm" className="hidden sm:flex">SSH</Button>
-                <Button variant="ghost" size="icon" onClick={() => setIsDeviceDetailsOpen(false)} className="rounded-full">
+                <Button variant="outline" size="sm" disabled={!selectedDevice.ip} className="hidden border-white/20 bg-white/10 text-white hover:bg-white/20 disabled:opacity-40 sm:flex">Web Console</Button>
+                <Button variant="outline" size="sm" disabled={!selectedDevice.ip} className="hidden border-white/20 bg-white/10 text-white hover:bg-white/20 disabled:opacity-40 sm:flex">SSH</Button>
+                <Button variant="ghost" size="icon" onClick={() => setIsDeviceDetailsOpen(false)} className="rounded-full text-white hover:bg-white/10">
                   <X className="w-5 h-5" />
                 </Button>
               </div>
             </div>
 
             {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 space-y-4 overflow-y-auto p-3 sm:p-4 lg:p-5">
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
+                {[
+                  { label: 'Serial', value: fallbackText(selectedDevice.serial), mono: true },
+                  { label: 'Management IP', value: fallbackText(selectedDevice.ip, 'No IP'), mono: true },
+                  { label: 'Rack', value: fallbackText(selectedDevice.rack) },
+                  { label: 'U-Space', value: fallbackText(selectedDevice.uPosition), mono: true },
+                  {
+                    label: 'Power',
+                    value: selectedDevice.powerWatts !== undefined && selectedDevice.powerWatts !== null
+                      ? `${selectedDevice.powerWatts}W`
+                      : fallbackText(selectedDevice.psuCapacity),
+                    mono: true,
+                  },
+                  { label: 'Assigned To', value: fallbackText(selectedDevice.assignedTo, 'Unassigned') },
+                ].map((item) => (
+                  <div key={item.label} className="min-w-0 rounded-lg border border-[#eadfce] bg-[#fffaf3] p-2.5">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#9a8066]">{item.label}</p>
+                    <p className={cn("mt-1 truncate text-sm font-semibold text-[#1f1a13]", item.mono && "font-mono")}>{item.value}</p>
+                  </div>
+                ))}
+              </div>
+
               <Tabs className="w-full">
-                <TabsList className="w-full justify-start border-b rounded-none bg-transparent h-auto p-0 mb-6">
+                <TabsList className="mb-4 flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b bg-transparent p-0 pb-px">
                   <TabsTrigger 
                     active={activeTab === 'general'} 
                     onClick={() => setActiveTab('general')}
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+                    className="shrink-0 rounded-none border-b-2 border-transparent px-3 py-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent sm:text-sm"
                   >
                     General
                   </TabsTrigger>
                   <TabsTrigger 
                     active={activeTab === 'network'} 
                     onClick={() => setActiveTab('network')}
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+                    className="shrink-0 rounded-none border-b-2 border-transparent px-3 py-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent sm:text-sm"
                   >
                     Network
                   </TabsTrigger>
                   <TabsTrigger 
                     active={activeTab === 'technical'} 
                     onClick={() => setActiveTab('technical')}
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+                    className="shrink-0 rounded-none border-b-2 border-transparent px-3 py-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent sm:text-sm"
                   >
                     Technical
                   </TabsTrigger>
                   <TabsTrigger 
                     active={activeTab === 'health'} 
                     onClick={() => setActiveTab('health')}
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+                    className="shrink-0 rounded-none border-b-2 border-transparent px-3 py-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent sm:text-sm"
                   >
                     Health
                   </TabsTrigger>
                   <TabsTrigger 
                     active={activeTab === 'maintenance'} 
                     onClick={() => setActiveTab('maintenance')}
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+                    className="shrink-0 rounded-none border-b-2 border-transparent px-3 py-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent sm:text-sm"
                   >
                     Maintenance
                   </TabsTrigger>
                   <TabsTrigger 
                     active={activeTab === 'documents'} 
                     onClick={() => setActiveTab('documents')}
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+                    className="shrink-0 rounded-none border-b-2 border-transparent px-3 py-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent sm:text-sm"
                   >
                     Documents
                   </TabsTrigger>
                   <TabsTrigger 
                     active={activeTab === 'dependencies'} 
                     onClick={() => setActiveTab('dependencies')}
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+                    className="shrink-0 rounded-none border-b-2 border-transparent px-3 py-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent sm:text-sm"
                   >
                     Dependencies
                   </TabsTrigger>
                   <TabsTrigger 
                     active={activeTab === 'financials'} 
                     onClick={() => setActiveTab('financials')}
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+                    className="shrink-0 rounded-none border-b-2 border-transparent px-3 py-2 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent sm:text-sm"
                   >
                     Financials
                   </TabsTrigger>
@@ -2389,9 +2500,9 @@ export function Infrastructure() {
                       <CardContent className="space-y-3">
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Device Belongs To</div>
-                          <div className="font-medium">{selectedDevice.belongsTo || selectedDevice.owner}</div>
+                          <div className="font-medium">{fallbackText(selectedDevice.belongsTo || selectedDevice.owner)}</div>
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Device Assigned To</div>
-                          <div className="font-medium">{selectedDevice.assignedTo || 'Unassigned'}</div>
+                          <div className="font-medium">{fallbackText(selectedDevice.assignedTo, 'Unassigned')}</div>
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Criticality</div>
                           <div>
                             <Badge variant={selectedDevice.criticality === 'Critical' ? 'destructive' : selectedDevice.criticality === 'High' ? 'warning' : 'outline'} className="h-4 text-[8px]">
@@ -2414,13 +2525,13 @@ export function Infrastructure() {
                       <CardContent className="space-y-3">
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Location / Site</div>
-                          <div className="font-medium">{selectedDevice.site}</div>
+                          <div className="font-medium">{fallbackText(selectedDevice.site)}</div>
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Datacenter / Office</div>
-                          <div className="font-medium">{selectedDevice.datacenter || 'N/A'}</div>
+                          <div className="font-medium">{fallbackText(selectedDevice.datacenter)}</div>
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Rack / Position</div>
-                          <div className="font-medium">{selectedDevice.rack} / {selectedDevice.uPosition}</div>
+                          <div className="font-medium">{fallbackText(selectedDevice.rack)} / {fallbackText(selectedDevice.uPosition)}</div>
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">U-Space</div>
-                          <div className="font-medium">{selectedDevice.uPosition}</div>
+                          <div className="font-medium">{fallbackText(selectedDevice.uPosition)}</div>
                         </div>
                       </CardContent>
                     </Card>
@@ -2441,9 +2552,9 @@ export function Infrastructure() {
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Asset Tag</div>
                           <div className="font-mono">{selectedDevice.id}</div>
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Hostname</div>
-                          <div className="font-medium">{selectedDevice.hostname || 'N/A'}</div>
+                          <div className="font-medium">{fallbackText(selectedDevice.hostname)}</div>
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Serial Number</div>
-                          <div className="font-mono">{selectedDevice.serial}</div>
+                          <div className="font-mono">{fallbackText(selectedDevice.serial)}</div>
                         </div>
                       </CardContent>
                     </Card>
@@ -2458,13 +2569,13 @@ export function Infrastructure() {
                       <CardContent className="space-y-3">
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">LAN / DMZ IP</div>
-                          <div className="font-mono font-bold">{selectedDevice.ip}</div>
+                          <div className="font-mono font-bold">{fallbackText(selectedDevice.ip, 'No management IP')}</div>
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">ILO IP</div>
-                          <div className="font-mono">{selectedDevice.iloIp || 'N/A'}</div>
+                          <div className="font-mono">{fallbackText(selectedDevice.iloIp)}</div>
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Subnet Mask</div>
-                          <div className="font-mono">{selectedDevice.mask}</div>
+                          <div className="font-mono">{fallbackText(selectedDevice.mask)}</div>
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Gateway</div>
-                          <div className="font-mono">{selectedDevice.gateway}</div>
+                          <div className="font-mono">{fallbackText(selectedDevice.gateway)}</div>
                         </div>
                       </CardContent>
                     </Card>
@@ -2485,9 +2596,9 @@ export function Infrastructure() {
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Device Type</div>
                           <div className="font-medium">{selectedDevice.type}</div>
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Device Brand</div>
-                          <div className="font-medium">{selectedDevice.vendor}</div>
+                          <div className="font-medium">{fallbackText(selectedDevice.vendor, 'Unknown')}</div>
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Model</div>
-                          <div className="font-medium">{selectedDevice.model}</div>
+                          <div className="font-medium">{fallbackText(selectedDevice.model)}</div>
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Operating System</div>
                           <div className="font-medium">{selectedDevice.os || 'N/A'}</div>
                         </div>
@@ -2529,9 +2640,13 @@ export function Infrastructure() {
                       <CardContent className="space-y-3">
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Number of PSUs</div>
-                          <div className="font-medium">{selectedDevice.powerSupplies || 'N/A'}</div>
+                          <div className="font-medium">{fallbackText(selectedDevice.powerSupplies)}</div>
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">PSU Capacity</div>
-                          <div className="font-medium">{selectedDevice.psuCapacity || 'N/A'}</div>
+                          <div className="font-medium">{fallbackText(selectedDevice.psuCapacity)}</div>
+                          <div className="text-muted-foreground uppercase font-bold text-[9px]">Power Draw</div>
+                          <div className="font-medium">{selectedDevice.powerWatts !== undefined && selectedDevice.powerWatts !== null ? `${selectedDevice.powerWatts}W` : 'N/A'}</div>
+                          <div className="text-muted-foreground uppercase font-bold text-[9px]">Remarks</div>
+                          <div className="font-medium">{fallbackText(selectedDevice.importConfig?.remarks)}</div>
                         </div>
                       </CardContent>
                     </Card>
@@ -2550,7 +2665,7 @@ export function Infrastructure() {
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Deployment Status</div>
                           <div className="font-medium">{selectedDevice.deploymentStatus || 'N/A'}</div>
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">Warranty Details</div>
-                          <div className="font-medium">{selectedDevice.warrantyExpiry}</div>
+                          <div className="font-medium">{fallbackText(selectedDevice.warrantyExpiry)}</div>
                           <div className="text-muted-foreground uppercase font-bold text-[9px]">License Info</div>
                           <div className="font-medium">{selectedDevice.licenseInfo || 'N/A'}</div>
                         </div>
